@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.bak*
+memory.json
+main.py.final
+main.py.stable
+main.py.stable.v3
+main.py.v2.final
