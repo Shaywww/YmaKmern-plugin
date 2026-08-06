@@ -79,6 +79,14 @@ FALLBACK_BASE  = os.environ.get("FALLBACK_BASE", VISION_BASE)
 # ---- Model Router（文档 2.5.7：八类角色统一路由 + 降级）----
 ROUTER_ENABLED = os.environ.get("DUDUDA_ROUTER", "1") == "1"
 
+# ---- Hybrid Renderer（文档 2.5.8：LLM 风格转换 + 事实锚点保持）----
+HYBRID_RENDER = os.environ.get("DUDUDA_HYBRID_RENDER", "1") == "1"
+_RENDER_CONVERTER_SYSTEM = (
+    "你是回复风格转换器。只能调整语序、句式、称呼、口语程度和适量表情；"
+    "绝对不能修改数字、日期、来源、权限、拒绝结论、工具状态、目标用户或"
+    "附件内容。只输出转换后的文本，不要任何解释。"
+)
+
 # 降级模型 / 视觉模型走各自网关（base + key 按模型选择）
 provider = OpenAIProvider(
     api_key=API_KEY,
@@ -158,7 +166,9 @@ class Main(star.Star):
         super().__init__(context)
         self.personas = PersonaRegistry()
         self.renderer = PersonaRenderer(self.personas.active)
-        self.oc_renderer = OCRenderer(persona=persona_to_oc(self.personas.active))
+        self.oc_renderer = OCRenderer(
+            persona=persona_to_oc(self.personas.active),
+            llm=self._render_llm if HYBRID_RENDER else None)
         self.permission_engine = PermissionEngine()
         self.confirmations = ConfirmationStore(ttl_seconds=600)
         self.memory = JSONMemoryRepository(path=MEMORY_FILE)
@@ -279,6 +289,14 @@ class Main(star.Star):
                         run_id="", trace_id=""):
         return await self._core._call_llm(
             system, user_msg, max_tokens=max_tokens, temperature=temperature,
+            run_id=run_id, trace_id=trace_id)
+
+    async def _render_llm(self, prompt: str, run_id: str = "",
+                          trace_id: str = "") -> str:
+        """2.5.8 hybrid renderer 模型回调：按 Persona 做风格转换。"""
+        return await self._core._call_llm(
+            _RENDER_CONVERTER_SYSTEM, prompt,
+            max_tokens=1024, temperature=0.9,
             run_id=run_id, trace_id=trace_id)
 
     async def _call_vision(self, system, user_text, image_b64, mime,
