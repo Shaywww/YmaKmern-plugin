@@ -339,6 +339,8 @@ class Main(star.Star):
 
     def _register_mcp_caps(self):
         try:
+            from packages.mcp.access import mcp_access
+            mcp_access.ensure_seed(owner_ids=tuple(sorted(OWNER_IDS)))
             if os.environ.get("DUDUDA_MCP_CLIENT", "0") == "1":
                 # P6: 统一 MCP Client（iCourse stdio server，懒启动）
                 from packages.mcp.client import create_unified_provider_factory
