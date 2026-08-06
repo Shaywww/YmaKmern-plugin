@@ -257,9 +257,10 @@ class Main(star.Star):
         return self._core._make_scope(event, msg_type=msg_type)
 
     def _store_memory(self, event, *contents: str, msg_type="text",
-                      sensitivity=None):
+                      sensitivity=None, run_id="", trace_id=""):
         self._core._store_memory(
-            event, *contents, msg_type=msg_type, sensitivity=sensitivity)
+            event, *contents, msg_type=msg_type, sensitivity=sensitivity,
+            run_id=run_id, trace_id=trace_id)
 
     def _read_memory(self, event, limit=8, budget=2500, include_episodic=False):
         return self._core._read_memory(
@@ -274,12 +275,16 @@ class Main(star.Star):
     def _persona_tone(self):
         return self._core._persona_tone()
 
-    async def _call_llm(self, system, user_msg, max_tokens=1024, temperature=0.5):
+    async def _call_llm(self, system, user_msg, max_tokens=1024, temperature=0.5,
+                        run_id="", trace_id=""):
         return await self._core._call_llm(
-            system, user_msg, max_tokens=max_tokens, temperature=temperature)
+            system, user_msg, max_tokens=max_tokens, temperature=temperature,
+            run_id=run_id, trace_id=trace_id)
 
-    async def _call_vision(self, system, user_text, image_b64, mime):
-        return await self._core._call_vision(system, user_text, image_b64, mime)
+    async def _call_vision(self, system, user_text, image_b64, mime,
+                           run_id="", trace_id=""):
+        return await self._core._call_vision(
+            system, user_text, image_b64, mime, run_id=run_id, trace_id=trace_id)
 
     @staticmethod
     def _deny_hint(res, conf) -> str:
