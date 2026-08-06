@@ -202,6 +202,7 @@ class Main(star.Star):
         self.enabled  = True
         self._bot_id  = None
         self._processed: set[str] = set()
+        self._pending_deliveries: dict = {}  # run_id -> (RuntimeResult, reply, ts)
         self._last_file_ts: float = 0.0
         self.mcp_client = None
         self._register_builtin_caps()
@@ -358,6 +359,14 @@ class Main(star.Star):
         reply = await dududa_handlers.run_message_flow(self, event)
         if reply:
             yield event.plain_result(reply)
+
+    @filter.after_message_sent()
+    async def _after_message_sent(self, event: AstrMessageEvent):
+        """两段式完成协议 Phase B：框架发送后确认投递（文档 2.3.15-2.3.16）。"""
+        try:
+            await dududa_handlers.complete_delivery_after_send(self, event)
+        except Exception as e:
+            logger.warning("after_message_sent delivery ack failed: %s", e)
 
     async def _handle_media(self, event, url, name, is_image):
         return await dududa_handlers.handle_media(self, event, url, name, is_image)
