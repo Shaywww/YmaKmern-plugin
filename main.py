@@ -18,7 +18,7 @@ from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.all import *
 
 from packages.router.openai_provider import OpenAIProvider
-from packages.router.router import ModelConfig, ModelRole
+from packages.router.router import ModelConfig, ModelRole, RouterConfig, ModelRouter
 from packages.core.persona.registry import PersonaRegistry
 from packages.core.persona.persona_renderer import PersonaRenderer
 from packages.core.memory import (MemoryRecord, MemoryType, MemoryScope,
@@ -66,7 +66,6 @@ logger = logging.getLogger("dududa20")
 
 API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 MODEL   = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
-provider = OpenAIProvider(api_key=API_KEY, base_url="https://api.deepseek.com/v1")
 
 VISION_KEY   = os.environ.get("OPENAI_API_KEY", API_KEY)
 VISION_MODEL = os.environ.get("VISION_MODEL", "claude-haiku-4-5-20251001")
@@ -76,6 +75,48 @@ VISION_BASE  = os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.xyz/v1")
 FALLBACK_MODEL = os.environ.get("FALLBACK_MODEL", "gpt-5.5")
 FALLBACK_KEY   = os.environ.get("FALLBACK_KEY", VISION_KEY)
 FALLBACK_BASE  = os.environ.get("FALLBACK_BASE", VISION_BASE)
+
+# ---- Model Router（文档 2.5.7：八类角色统一路由 + 降级）----
+ROUTER_ENABLED = os.environ.get("DUDUDA_ROUTER", "1") == "1"
+
+# 降级模型 / 视觉模型走各自网关（base + key 按模型选择）
+provider = OpenAIProvider(
+    api_key=API_KEY,
+    base_url="https://api.deepseek.com/v1",
+    base_urls={FALLBACK_MODEL: FALLBACK_BASE, VISION_MODEL: VISION_BASE},
+    api_keys={FALLBACK_MODEL: FALLBACK_KEY, VISION_MODEL: VISION_KEY},
+)
+
+
+def _role_cfg(role, effort, tokens, temp=0.7, timeout=30.0):
+    """单角色生产配置：主模型 = MODEL，降级 = FALLBACK_MODEL（文档 2.5.7）。"""
+    return ModelConfig(
+        role=role, model_id=MODEL, reasoning_effort=effort,
+        max_tokens=tokens, temperature=temp, timeout_seconds=timeout,
+        retry_count=1, allow_sensitive=False, route_hint_allowed=False,
+        fallback_model_id=FALLBACK_MODEL,
+    )
+
+
+router_config = RouterConfig(roles={
+    ModelRole.PERCEPTION: _role_cfg(ModelRole.PERCEPTION, "low", 1024),
+    ModelRole.SOCIAL_DECISION: _role_cfg(ModelRole.SOCIAL_DECISION, "medium", 512),
+    ModelRole.TOOL_PLANNING: _role_cfg(ModelRole.TOOL_PLANNING, "high", 2048),
+    ModelRole.DIRECT_CHAT: _role_cfg(ModelRole.DIRECT_CHAT, "medium", 2048),
+    ModelRole.RESPONSE_COMPOSITION: _role_cfg(ModelRole.RESPONSE_COMPOSITION, "medium", 2048),
+    ModelRole.MEMORY_SUMMARY: _role_cfg(ModelRole.MEMORY_SUMMARY, "low", 1024),
+    # 视觉角色指向多模态网关（DeepSeek 不支持多模态）
+    ModelRole.IMAGE_UNDERSTANDING: ModelConfig(
+        role=ModelRole.IMAGE_UNDERSTANDING, model_id=VISION_MODEL,
+        reasoning_effort="medium", max_tokens=1024, temperature=0.3,
+        timeout_seconds=90.0, retry_count=1, allow_sensitive=False,
+        route_hint_allowed=False, fallback_model_id=FALLBACK_MODEL),
+    ModelRole.IMAGE_GENERATION: ModelConfig(
+        role=ModelRole.IMAGE_GENERATION, model_id=VISION_MODEL,
+        reasoning_effort="medium", max_tokens=1024, temperature=0.3,
+        timeout_seconds=90.0, retry_count=1, allow_sensitive=False,
+        route_hint_allowed=False, fallback_model_id=FALLBACK_MODEL),
+})
 
 # ---- P5: 安全（Policy / 确认 / 脱敏）与 Memory v2 配置 ----
 _PLUGIN_DATA_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -125,12 +166,16 @@ class Main(star.Star):
         self.context_builder = ContextBuilder(memory_repo=self.memory, capability_registry=self.cap_registry)
         self.input_adapter = AstrBotInputAdapter(ActorMappingConfig(hash_user_ids=True))
         self._pending_confirms = {}  # 兼容属性（实际状态在 DududaCore）
+        self._model_router = None
+        if ROUTER_ENABLED:
+            self._model_router = ModelRouter(config=router_config, provider=provider)
         self._core = DududaCore(
             memory=self.memory, personas=self.personas, renderer=self.renderer,
             oc_renderer=self.oc_renderer, permission_engine=self.permission_engine,
             confirmations=self.confirmations, cap_registry=self.cap_registry,
             context_builder=self.context_builder, input_adapter=self.input_adapter,
             llm_provider=provider, config=_LiveConfig(),
+            model_router=self._model_router,
         )
         self.runtime = _ProdOrchestrator(
             plugin=self,
