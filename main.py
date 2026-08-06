@@ -34,6 +34,7 @@ from packages.core.capability import (CapabilityRegistry, Capability, Capability
 from packages.safeguards.security import (PermissionEngine, AuthorizationDecision,
                                           AuthorizationResult, AuthReason,
                                           ConfirmationStore, Redactor)
+from packages.safeguards.limits import make_runtime_limits_from_env
 from packages.core.decision import SocialDecisionEngine, SocialDecision, DecisionReason
 from packages.core.delivery import DeliveryReceipt, DeliveryStatus
 from packages.runtime.orchestrator import RuntimeOrchestrator
@@ -171,6 +172,9 @@ class Main(star.Star):
             llm=self._render_llm if HYBRID_RENDER else None)
         self.permission_engine = PermissionEngine()
         self.confirmations = ConfirmationStore(ttl_seconds=600)
+        self.limits = make_runtime_limits_from_env(
+            budget_file_default=os.path.join(
+                _PLUGIN_DATA_DIR, "data", "budget.json"))
         self.memory = JSONMemoryRepository(path=MEMORY_FILE)
         self.cap_registry = CapabilityRegistry()
         self.context_builder = ContextBuilder(memory_repo=self.memory, capability_registry=self.cap_registry)
