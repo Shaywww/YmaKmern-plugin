@@ -297,7 +297,7 @@ class Main(star.Star):
         return await self._core._call_llm(
             _RENDER_CONVERTER_SYSTEM, prompt,
             max_tokens=1024, temperature=0.9,
-            run_id=run_id, trace_id=trace_id)
+            run_id=run_id, trace_id=trace_id, skip_render=True)
 
     async def _call_vision(self, system, user_text, image_b64, mime,
                            run_id="", trace_id=""):
