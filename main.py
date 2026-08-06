@@ -53,7 +53,7 @@ from packages.application.dududa_prod import (
 )
 from packages.application.dududa_core import DududaCore, persona_to_oc
 from packages.application import dududa_commands, dududa_handlers
-
+from packages.application.dududa_log import get_logger as _get_logger
 # ---- Model Router（P1 遗留接入：消息类型 -> 模型路由，带回退） ----
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path:
@@ -62,7 +62,7 @@ from _router import router as _model_router
 router = _model_router
 
 
-logger = logging.getLogger("dududa20")
+logger = _get_logger("dududa20")
 
 API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 MODEL   = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
