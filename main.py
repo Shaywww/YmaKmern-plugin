@@ -38,6 +38,7 @@ from packages.safeguards.limits import make_runtime_limits_from_env
 from packages.core.decision import SocialDecisionEngine, SocialDecision, DecisionReason
 from packages.core.delivery import DeliveryReceipt, DeliveryStatus
 from packages.runtime.orchestrator import RuntimeOrchestrator
+from packages.core.idempotency import MessageIdempotencyRegistry
 from packages.mcp.registry import register_all_mcp_services
 from packages.planner.integration import integrate_with_orchestrator
 from packages.adapters.astrbot.input_adapter import AstrBotInputAdapter, ActorMappingConfig
@@ -201,7 +202,7 @@ class Main(star.Star):
         )
         self.enabled  = True
         self._bot_id  = None
-        self._processed: set[str] = set()
+        self._idem = MessageIdempotencyRegistry()
         self._pending_deliveries: dict = {}  # run_id -> (RuntimeResult, reply, ts)
         self._last_file_ts: float = 0.0
         self.mcp_client = None
