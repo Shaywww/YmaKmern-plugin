@@ -198,6 +198,8 @@ class Main(star.Star):
             llm_provider=provider, config=_LiveConfig(),
             model_router=self._model_router,
         )
+        # Core 判重注册表：独立于 handlers 外层判重（外层已登记的消息不会被 Core 误判）
+        self._idem_core = MessageIdempotencyRegistry()
         self.runtime = _ProdOrchestrator(
             plugin=self,
             decision_engine=_ProdDecisionEngine(),
@@ -206,6 +208,7 @@ class Main(star.Star):
             renderer=self.oc_renderer,
             planner_integration=integrate_with_orchestrator(None, self.cap_registry),
             profile_store=self.profile_store,
+            idempotency_registry=self._idem_core,
         )
         self.enabled  = True
         self._bot_id  = None
