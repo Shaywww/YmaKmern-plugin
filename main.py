@@ -39,6 +39,7 @@ from packages.core.decision import SocialDecisionEngine, SocialDecision, Decisio
 from packages.core.delivery import DeliveryReceipt, DeliveryStatus
 from packages.runtime.orchestrator import RuntimeOrchestrator
 from packages.core.idempotency import MessageIdempotencyRegistry
+from packages.core.profile import ProfileStore
 from packages.mcp.registry import register_all_mcp_services
 from packages.planner.integration import integrate_with_orchestrator
 from packages.adapters.astrbot.input_adapter import AstrBotInputAdapter, ActorMappingConfig
@@ -178,7 +179,12 @@ class Main(star.Star):
                 _PLUGIN_DATA_DIR, "data", "budget.json"))
         self.memory = JSONMemoryRepository(path=MEMORY_FILE)
         self.cap_registry = CapabilityRegistry()
-        self.context_builder = ContextBuilder(memory_repo=self.memory, capability_registry=self.cap_registry)
+        self.profile_store = ProfileStore(path=os.environ.get(
+            "DUDUDA_PROFILE_FILE",
+            os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
+        self.context_builder = ContextBuilder(
+            memory_repo=self.memory, capability_registry=self.cap_registry,
+            profile_store=self.profile_store)
         self.input_adapter = AstrBotInputAdapter(ActorMappingConfig(hash_user_ids=True))
         self._pending_confirms = {}  # 兼容属性（实际状态在 DududaCore）
         self._model_router = None
@@ -199,6 +205,7 @@ class Main(star.Star):
             memory_repo=self.memory,
             renderer=self.oc_renderer,
             planner_integration=integrate_with_orchestrator(None, self.cap_registry),
+            profile_store=self.profile_store,
         )
         self.enabled  = True
         self._bot_id  = None
