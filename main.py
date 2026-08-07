@@ -41,6 +41,7 @@ from packages.runtime.orchestrator import RuntimeOrchestrator
 from packages.core.idempotency import MessageIdempotencyRegistry
 from packages.core.attachment_repo import AttachmentRepository
 from packages.core.profile import ProfileStore
+from packages.core.group_policy import GroupPolicyStore
 from packages.mcp.registry import register_all_mcp_services
 from packages.planner.integration import integrate_with_orchestrator
 from packages.adapters.astrbot.input_adapter import AstrBotInputAdapter, ActorMappingConfig
@@ -136,6 +137,9 @@ MEMORY_FILE = os.environ.get("DUDUDA_MEMORY_FILE",
                              os.path.join(_PLUGIN_DATA_DIR, "memory.json"))
 CONFIRM_FILE = os.environ.get("DUDUDA_CONFIRM_FILE",
                               os.path.join(_PLUGIN_DATA_DIR, "confirmations.json"))
+GROUP_POLICY_FILE = os.environ.get(
+    "DUDUDA_GROUP_POLICY_FILE",
+    os.path.join(_PLUGIN_DATA_DIR, "data", "group_policy.json"))
 OWNER_IDS = {x.strip() for x in os.environ.get("DUDUDA_OWNER_IDS", "").split(",") if x.strip()}
 ADMIN_IDS = {x.strip() for x in os.environ.get("DUDUDA_ADMIN_IDS", "").split(",") if x.strip()}
 TRUSTED_IDS = {x.strip() for x in os.environ.get("DUDUDA_TRUSTED_IDS", "").split(",") if x.strip()}
@@ -183,6 +187,7 @@ class Main(star.Star):
         self.profile_store = ProfileStore(path=os.environ.get(
             "DUDUDA_PROFILE_FILE",
             os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
+        self.group_policy = GroupPolicyStore(path=GROUP_POLICY_FILE)
         self.context_builder = ContextBuilder(
             memory_repo=self.memory, capability_registry=self.cap_registry,
             profile_store=self.profile_store)
@@ -198,6 +203,7 @@ class Main(star.Star):
             context_builder=self.context_builder, input_adapter=self.input_adapter,
             llm_provider=provider, config=_LiveConfig(),
             model_router=self._model_router,
+            group_policy=self.group_policy,
         )
         # Core 判重注册表：独立于 handlers 外层判重（外层已登记的消息不会被 Core 误判）
         self._idem_core = MessageIdempotencyRegistry()
@@ -276,6 +282,16 @@ class Main(star.Star):
 
     def _should_ignore(self, event) -> bool:
         return self._core._should_ignore(event)
+
+    def _group_policy_view(self, event):
+        """当前群 PolicyView 投影（供 ContextBuilder / Runtime 使用）。"""
+        try:
+            gid = str(getattr(event.message_obj, "group", None) or "")
+            if not gid:
+                return None
+            return self.group_policy.to_policy_view(gid)
+        except Exception:
+            return None
 
     def _social_decision(self, event) -> tuple:
         try:
@@ -432,6 +448,32 @@ class Main(star.Star):
     @filter.command("dududa_on")
     async def cmd_on(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_on_impl(self, event))
+
+    @filter.command("dududa_group")
+    async def cmd_group(self, event: AstrMessageEvent, target: str = None):
+        """查看群策略（mode / reply_rate / meme_rate）。"""
+        yield event.plain_result(await dududa_commands.cmd_group_impl(self, event, target))
+
+    @filter.command("dududa_mode")
+    async def cmd_group_mode(self, event: AstrMessageEvent,
+                             group_id: str = None, mode: str = None):
+        """设置群模式 normal / silent / off（管理员）。"""
+        yield event.plain_result(await dududa_commands.cmd_group_mode_impl(
+            self, event, group_id, mode))
+
+    @filter.command("dududa_reply_rate")
+    async def cmd_group_reply_rate(self, event: AstrMessageEvent,
+                                   group_id: str = None, rate: str = None):
+        """设置群被动参与概率 0~1（管理员）。"""
+        yield event.plain_result(await dududa_commands.cmd_group_reply_rate_impl(
+            self, event, group_id, rate))
+
+    @filter.command("dududa_meme_rate")
+    async def cmd_group_meme_rate(self, event: AstrMessageEvent,
+                                  group_id: str = None, rate: str = None):
+        """设置群表情回复比例 0~1（管理员）。"""
+        yield event.plain_result(await dududa_commands.cmd_group_meme_rate_impl(
+            self, event, group_id, rate))
 
     @filter.command("dududa_forget")
     async def cmd_forget(self, event: AstrMessageEvent):
