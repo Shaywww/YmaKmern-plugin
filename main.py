@@ -10,55 +10,55 @@
 """
 import sys, os, re, time, logging, httpx, json as _json, base64 as _b64
 from io import BytesIO
-sys.path.insert(0, "/opt/dududa20-prototype")
+sys.path.insert(0, "/opt/dududa20-prototype/packages/dududa-agent/src")
 
 from astrbot.api import star
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.all import *
 
-from packages.router.openai_provider import OpenAIProvider
-from packages.router.router import ModelConfig, ModelRole, RouterConfig, ModelRouter
-from packages.core.persona.registry import PersonaRegistry
-from packages.core.persona.persona_renderer import PersonaRenderer
-from packages.core.memory import (MemoryRecord, MemoryType, MemoryScope,
+from dududa.router.openai_provider import OpenAIProvider
+from dududa.router.router import ModelConfig, ModelRole, RouterConfig, ModelRouter
+from dududa.core.persona.registry import PersonaRegistry
+from dududa.core.persona.persona_renderer import PersonaRenderer
+from dududa.core.memory import (MemoryRecord, MemoryType, MemoryScope,
                                   MemoryCandidate, SensitivityLevel,
                                   JSONMemoryRepository)
-from packages.core.state import (SocialAction, RuntimeState, RuntimePhase,
+from dududa.core.state import (SocialAction, RuntimeState, RuntimePhase,
                                  RunOutcome, RuntimeBudget)
-from packages.core.renderer import FactAnchor, DraftResponse, FinalResponse, OCRenderer
-from packages.core.perception import PerceptionResult, SpeechAct, EntityRef
-from packages.core.context import ContextBuilder, ContextSnapshot
-from packages.core.capability import (CapabilityRegistry, Capability, CapabilityRisk,
+from dududa.core.renderer import FactAnchor, DraftResponse, FinalResponse, OCRenderer
+from dududa.core.perception import PerceptionResult, SpeechAct, EntityRef
+from dududa.core.context import ContextBuilder, ContextSnapshot
+from dududa.core.capability import (CapabilityRegistry, Capability, CapabilityRisk,
                                       ProviderType, CapProvider, ToolObservation)
-from packages.safeguards.security import (PermissionEngine, AuthorizationDecision,
+from dududa.safeguards.security import (PermissionEngine, AuthorizationDecision,
                                           AuthorizationResult, AuthReason,
                                           ConfirmationStore, Redactor)
-from packages.safeguards.limits import make_runtime_limits_from_env
-from packages.core.decision import SocialDecisionEngine, SocialDecision, DecisionReason
-from packages.core.delivery import DeliveryReceipt, DeliveryStatus
-from packages.runtime.orchestrator import RuntimeOrchestrator
-from packages.core.idempotency import MessageIdempotencyRegistry
-from packages.core.attachment_repo import AttachmentRepository
-from packages.core.profile import ProfileStore
-from packages.core.group_policy import GroupPolicyStore
-from packages.core.style_store import UserStyleStore
-from packages.core.structured_output import PERCEPTION_SYSTEM_PROMPT
-from packages.mcp.registry import register_all_mcp_services
-from packages.planner.integration import integrate_with_orchestrator
-from packages.adapters.astrbot.input_adapter import AstrBotInputAdapter, ActorMappingConfig
+from dududa.safeguards.limits import make_runtime_limits_from_env
+from dududa.core.decision import SocialDecisionEngine, SocialDecision, DecisionReason
+from dududa.core.delivery import DeliveryReceipt, DeliveryStatus
+from dududa.runtime.orchestrator import RuntimeOrchestrator
+from dududa.core.idempotency import MessageIdempotencyRegistry
+from dududa.core.attachment_repo import AttachmentRepository
+from dududa.core.profile import ProfileStore
+from dududa.core.group_policy import GroupPolicyStore
+from dududa.core.style_store import UserStyleStore
+from dududa.core.structured_output import PERCEPTION_SYSTEM_PROMPT
+from dududa.mcp.registry import register_all_mcp_services
+from dududa.planner.integration import integrate_with_orchestrator
+from dududa.adapters.astrbot.input_adapter import AstrBotInputAdapter, ActorMappingConfig
 
-from packages.application.dududa_utils import (
+from dududa.application.dududa_utils import (
     _redact_text, _contains_restricted, _atomic_write_json,
     _group_safe_observations, _detect_media, _has_media_in_raw,
     _file_ext, _parse_document,
     _RESTRICTED_PATTERNS, _SENSITIVE_GROUP_KW, _IGNORE_PATTERNS, _IMAGE_EXTS,
 )
-from packages.application.dududa_prod import (
+from dududa.application.dududa_prod import (
     _ProdDecisionEngine, _ProdCapProvider, _ProdOrchestrator,
 )
-from packages.application.dududa_core import DududaCore, persona_to_oc
-from packages.application import dududa_commands, dududa_handlers
-from packages.application.dududa_log import get_logger as _get_logger
+from dududa.application.dududa_core import DududaCore, persona_to_oc
+from dududa.application import dududa_commands, dududa_handlers
+from dududa.application.dududa_log import get_logger as _get_logger
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path:
     sys.path.insert(0, _PLUGIN_DIR)
@@ -392,10 +392,10 @@ class Main(star.Star):
 
     def _register_mcp_caps(self):
         try:
-            from packages.mcp.access import mcp_access
+            from dududa.mcp.access import mcp_access
             mcp_access.ensure_seed(owner_ids=tuple(sorted(OWNER_IDS)))
             if os.environ.get("DUDUDA_MCP_CLIENT", "0") == "1":
-                from packages.mcp.client import create_unified_provider_factory
+                from dududa.mcp.client import create_unified_provider_factory
                 factory = create_unified_provider_factory()
                 n = register_all_mcp_services(
                     self.cap_registry, provider_factory=factory)
