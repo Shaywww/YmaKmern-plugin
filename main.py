@@ -219,6 +219,7 @@ class Main(star.Star):
             planner_integration=integrate_with_orchestrator(None, self.cap_registry),
             profile_store=self.profile_store,
             idempotency_registry=self._idem_core,
+            confirmation_store=self.confirmations,
         )
         self.enabled  = True
         self._bot_id  = None
