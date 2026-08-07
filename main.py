@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Dududa 2.0 AstrBot 插件 —— 薄 Adapter（Phase 4 拆分）。
 
 职责边界：
@@ -469,29 +468,31 @@ class Main(star.Star):
 
     @filter.command("dududa_group")
     async def cmd_group(self, event: AstrMessageEvent, target: str = None):
-        """查看群策略。"""
         yield event.plain_result(await dududa_commands.cmd_group_impl(self, event, target))
 
     @filter.command("dududa_mode")
     async def cmd_group_mode(self, event: AstrMessageEvent,
                              group_id: str = None, mode: str = None):
-        """设置群模式 normal/silent/off。"""
         yield event.plain_result(await dududa_commands.cmd_group_mode_impl(
             self, event, group_id, mode))
 
     @filter.command("dududa_reply_rate")
     async def cmd_group_reply_rate(self, event: AstrMessageEvent,
                                    group_id: str = None, rate: str = None):
-        """设置群被动参与概率 0~1。"""
         yield event.plain_result(await dududa_commands.cmd_group_reply_rate_impl(
             self, event, group_id, rate))
 
     @filter.command("dududa_meme_rate")
     async def cmd_group_meme_rate(self, event: AstrMessageEvent,
                                   group_id: str = None, rate: str = None):
-        """设置群表情回复比例 0~1。"""
         yield event.plain_result(await dududa_commands.cmd_group_meme_rate_impl(
             self, event, group_id, rate))
+
+    @filter.command("dududa_interrupt_cost")
+    async def cmd_group_interrupt_cost(self, event: AstrMessageEvent,
+                                       group_id: str = None, cost: str = None):
+        yield event.plain_result(await dududa_commands.cmd_group_interrupt_cost_impl(
+            self, event, group_id, cost))
 
     @filter.command("dududa_forget")
     async def cmd_forget(self, event: AstrMessageEvent):
