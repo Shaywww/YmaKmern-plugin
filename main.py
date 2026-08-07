@@ -42,6 +42,7 @@ from packages.core.idempotency import MessageIdempotencyRegistry
 from packages.core.attachment_repo import AttachmentRepository
 from packages.core.profile import ProfileStore
 from packages.core.group_policy import GroupPolicyStore
+from packages.core.structured_output import PERCEPTION_SYSTEM_PROMPT
 from packages.mcp.registry import register_all_mcp_services
 from packages.planner.integration import integrate_with_orchestrator
 from packages.adapters.astrbot.input_adapter import AstrBotInputAdapter, ActorMappingConfig
@@ -140,6 +141,7 @@ CONFIRM_FILE = os.environ.get("DUDUDA_CONFIRM_FILE",
 GROUP_POLICY_FILE = os.environ.get(
     "DUDUDA_GROUP_POLICY_FILE",
     os.path.join(_PLUGIN_DATA_DIR, "data", "group_policy.json"))
+PERCEPTION_MODEL_ENABLED = os.environ.get("DUDUDA_PERCEPTION_MODEL", "0") == "1"
 OWNER_IDS = {x.strip() for x in os.environ.get("DUDUDA_OWNER_IDS", "").split(",") if x.strip()}
 ADMIN_IDS = {x.strip() for x in os.environ.get("DUDUDA_ADMIN_IDS", "").split(",") if x.strip()}
 TRUSTED_IDS = {x.strip() for x in os.environ.get("DUDUDA_TRUSTED_IDS", "").split(",") if x.strip()}
@@ -188,6 +190,7 @@ class Main(star.Star):
             "DUDUDA_PROFILE_FILE",
             os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
         self.group_policy = GroupPolicyStore(path=GROUP_POLICY_FILE)
+        self._perception_model_enabled = PERCEPTION_MODEL_ENABLED
         self.context_builder = ContextBuilder(
             memory_repo=self.memory, capability_registry=self.cap_registry,
             profile_store=self.profile_store)
@@ -329,10 +332,10 @@ class Main(star.Star):
         return self._core._persona_tone()
 
     async def _call_llm(self, system, user_msg, max_tokens=1024, temperature=0.5,
-                        run_id="", trace_id=""):
+                        run_id="", trace_id="", skip_render=False):
         return await self._core._call_llm(
             system, user_msg, max_tokens=max_tokens, temperature=temperature,
-            run_id=run_id, trace_id=trace_id)
+            run_id=run_id, trace_id=trace_id, skip_render=skip_render)
 
     async def _render_llm(self, prompt: str, run_id: str = "",
                           trace_id: str = "") -> str:
@@ -341,6 +344,21 @@ class Main(star.Star):
             _RENDER_CONVERTER_SYSTEM, prompt,
             max_tokens=1024, temperature=0.9,
             run_id=run_id, trace_id=trace_id, skip_render=True)
+
+    async def _perception_signal(self, text: str):
+        """模型感知信号（DUDUDA_PERCEPTION_MODEL=1 启用；失败返回 None）。"""
+        if not getattr(self, "_perception_model_enabled", False):
+            return None
+        try:
+            reply = await self._call_llm(
+                PERCEPTION_SYSTEM_PROMPT, text,
+                max_tokens=512, temperature=0.0, skip_render=True)
+            if not reply or not reply.strip():
+                return None
+            return _json.loads(reply)
+        except Exception as e:
+            logger.warning("Perception model signal failed: %s", e)
+            return None
 
     async def _call_vision(self, system, user_text, image_b64, mime,
                            run_id="", trace_id=""):
@@ -451,27 +469,27 @@ class Main(star.Star):
 
     @filter.command("dududa_group")
     async def cmd_group(self, event: AstrMessageEvent, target: str = None):
-        """查看群策略（mode / reply_rate / meme_rate）。"""
+        """查看群策略。"""
         yield event.plain_result(await dududa_commands.cmd_group_impl(self, event, target))
 
     @filter.command("dududa_mode")
     async def cmd_group_mode(self, event: AstrMessageEvent,
                              group_id: str = None, mode: str = None):
-        """设置群模式 normal / silent / off（管理员）。"""
+        """设置群模式 normal/silent/off。"""
         yield event.plain_result(await dududa_commands.cmd_group_mode_impl(
             self, event, group_id, mode))
 
     @filter.command("dududa_reply_rate")
     async def cmd_group_reply_rate(self, event: AstrMessageEvent,
                                    group_id: str = None, rate: str = None):
-        """设置群被动参与概率 0~1（管理员）。"""
+        """设置群被动参与概率 0~1。"""
         yield event.plain_result(await dududa_commands.cmd_group_reply_rate_impl(
             self, event, group_id, rate))
 
     @filter.command("dududa_meme_rate")
     async def cmd_group_meme_rate(self, event: AstrMessageEvent,
                                   group_id: str = None, rate: str = None):
-        """设置群表情回复比例 0~1（管理员）。"""
+        """设置群表情回复比例 0~1。"""
         yield event.plain_result(await dududa_commands.cmd_group_meme_rate_impl(
             self, event, group_id, rate))
 
