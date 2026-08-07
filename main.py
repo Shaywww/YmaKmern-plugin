@@ -41,12 +41,12 @@ from packages.core.idempotency import MessageIdempotencyRegistry
 from packages.core.attachment_repo import AttachmentRepository
 from packages.core.profile import ProfileStore
 from packages.core.group_policy import GroupPolicyStore
+from packages.core.style_store import UserStyleStore
 from packages.core.structured_output import PERCEPTION_SYSTEM_PROMPT
 from packages.mcp.registry import register_all_mcp_services
 from packages.planner.integration import integrate_with_orchestrator
 from packages.adapters.astrbot.input_adapter import AstrBotInputAdapter, ActorMappingConfig
 
-# ---- 应用用例层（Phase 4：Core 薄化） ----
 from packages.application.dududa_utils import (
     _redact_text, _contains_restricted, _atomic_write_json,
     _group_safe_observations, _detect_media, _has_media_in_raw,
@@ -59,7 +59,6 @@ from packages.application.dududa_prod import (
 from packages.application.dududa_core import DududaCore, persona_to_oc
 from packages.application import dududa_commands, dududa_handlers
 from packages.application.dududa_log import get_logger as _get_logger
-# ---- Model Router（P1 遗留接入：消息类型 -> 模型路由，带回退） ----
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path:
     sys.path.insert(0, _PLUGIN_DIR)
@@ -76,7 +75,6 @@ VISION_KEY   = os.environ.get("OPENAI_API_KEY", API_KEY)
 VISION_MODEL = os.environ.get("VISION_MODEL", "claude-haiku-4-5-20251001")
 VISION_BASE  = os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.xyz/v1")
 
-# Fallback models for resilience
 FALLBACK_MODEL = os.environ.get("FALLBACK_MODEL", "gpt-5.5")
 FALLBACK_KEY   = os.environ.get("FALLBACK_KEY", VISION_KEY)
 FALLBACK_BASE  = os.environ.get("FALLBACK_BASE", VISION_BASE)
@@ -84,7 +82,6 @@ FALLBACK_BASE  = os.environ.get("FALLBACK_BASE", VISION_BASE)
 # ---- Model Router（文档 2.5.7：八类角色统一路由 + 降级）----
 ROUTER_ENABLED = os.environ.get("DUDUDA_ROUTER", "1") == "1"
 
-# ---- Hybrid Renderer（文档 2.5.8：LLM 风格转换 + 事实锚点保持）----
 HYBRID_RENDER = os.environ.get("DUDUDA_HYBRID_RENDER", "1") == "1"
 _RENDER_CONVERTER_SYSTEM = (
     "你是回复风格转换器。只能调整语序、句式、称呼、口语程度和适量表情；"
@@ -92,7 +89,6 @@ _RENDER_CONVERTER_SYSTEM = (
     "附件内容。只输出转换后的文本，不要任何解释。"
 )
 
-# 降级模型 / 视觉模型走各自网关（base + key 按模型选择）
 provider = OpenAIProvider(
     api_key=API_KEY,
     base_url="https://api.deepseek.com/v1",
@@ -118,7 +114,6 @@ router_config = RouterConfig(roles={
     ModelRole.DIRECT_CHAT: _role_cfg(ModelRole.DIRECT_CHAT, "medium", 2048),
     ModelRole.RESPONSE_COMPOSITION: _role_cfg(ModelRole.RESPONSE_COMPOSITION, "medium", 2048),
     ModelRole.MEMORY_SUMMARY: _role_cfg(ModelRole.MEMORY_SUMMARY, "low", 1024),
-    # 视觉角色指向多模态网关（DeepSeek 不支持多模态）
     ModelRole.IMAGE_UNDERSTANDING: ModelConfig(
         role=ModelRole.IMAGE_UNDERSTANDING, model_id=VISION_MODEL,
         reasoning_effort="medium", max_tokens=1024, temperature=0.3,
@@ -140,6 +135,8 @@ CONFIRM_FILE = os.environ.get("DUDUDA_CONFIRM_FILE",
 GROUP_POLICY_FILE = os.environ.get(
     "DUDUDA_GROUP_POLICY_FILE",
     os.path.join(_PLUGIN_DATA_DIR, "data", "group_policy.json"))
+STYLE_FILE = os.environ.get("DUDUDA_STYLE_FILE",
+                         os.path.join(_PLUGIN_DATA_DIR, "data", "styles.json"))
 PERCEPTION_MODEL_ENABLED = os.environ.get("DUDUDA_PERCEPTION_MODEL", "0") == "1"
 OWNER_IDS = {x.strip() for x in os.environ.get("DUDUDA_OWNER_IDS", "").split(",") if x.strip()}
 ADMIN_IDS = {x.strip() for x in os.environ.get("DUDUDA_ADMIN_IDS", "").split(",") if x.strip()}
@@ -189,10 +186,12 @@ class Main(star.Star):
             "DUDUDA_PROFILE_FILE",
             os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
         self.group_policy = GroupPolicyStore(path=GROUP_POLICY_FILE)
+        self.style_store = UserStyleStore(path=STYLE_FILE)
         self._perception_model_enabled = PERCEPTION_MODEL_ENABLED
         self.context_builder = ContextBuilder(
             memory_repo=self.memory, capability_registry=self.cap_registry,
-            profile_store=self.profile_store)
+            profile_store=self.profile_store,
+            style_store=self.style_store)
         self.input_adapter = AstrBotInputAdapter(ActorMappingConfig(hash_user_ids=True))
         self._pending_confirms = {}  # 兼容属性（实际状态在 DududaCore）
         self._model_router = None
@@ -226,6 +225,7 @@ class Main(star.Star):
             renderer=self.oc_renderer,
             planner_integration=integrate_with_orchestrator(None, self.cap_registry),
             profile_store=self.profile_store,
+            style_store=self.style_store,
             idempotency_registry=self._idem_core,
             confirmation_store=self.confirmations,
         )
@@ -368,7 +368,6 @@ class Main(star.Star):
     def _deny_hint(res, conf) -> str:
         return dududa_commands._deny_hint(res, conf)
 
-    # ---- 装配（Capability 注册，保留在适配层） ----
 
     def _register_builtin_caps(self):
         # Register built-in capabilities for discovery & health tracking
@@ -396,7 +395,6 @@ class Main(star.Star):
             from packages.mcp.access import mcp_access
             mcp_access.ensure_seed(owner_ids=tuple(sorted(OWNER_IDS)))
             if os.environ.get("DUDUDA_MCP_CLIENT", "0") == "1":
-                # P6: 统一 MCP Client（iCourse stdio server，懒启动）
                 from packages.mcp.client import create_unified_provider_factory
                 factory = create_unified_provider_factory()
                 n = register_all_mcp_services(
@@ -408,8 +406,6 @@ class Main(star.Star):
             logger.info("MCP capabilities registered: %d", n)
         except Exception as e:
             logger.warning("MCP registration failed: %s", e)
-
-    # ---- 事件入口（薄壳） ----
 
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_message(self, event: AstrMessageEvent):
@@ -434,7 +430,6 @@ class Main(star.Star):
     async def _handle_text(self, event):
         return await dududa_handlers.handle_text(self, event)
 
-    # ---- 管理命令（薄壳） ----
 
     @filter.command("dududa")
     async def cmd_status(self, event: AstrMessageEvent):
@@ -493,6 +488,10 @@ class Main(star.Star):
                                        group_id: str = None, cost: str = None):
         yield event.plain_result(await dududa_commands.cmd_group_interrupt_cost_impl(
             self, event, group_id, cost))
+
+    @filter.command("dududa_style")
+    async def cmd_style(self, event: AstrMessageEvent):
+        yield event.plain_result(await dududa_commands.cmd_style_impl(self, event))
 
     @filter.command("dududa_forget")
     async def cmd_forget(self, event: AstrMessageEvent):
