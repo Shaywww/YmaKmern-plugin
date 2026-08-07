@@ -39,6 +39,7 @@ from packages.core.decision import SocialDecisionEngine, SocialDecision, Decisio
 from packages.core.delivery import DeliveryReceipt, DeliveryStatus
 from packages.runtime.orchestrator import RuntimeOrchestrator
 from packages.core.idempotency import MessageIdempotencyRegistry
+from packages.core.attachment_repo import AttachmentRepository
 from packages.core.profile import ProfileStore
 from packages.mcp.registry import register_all_mcp_services
 from packages.planner.integration import integrate_with_orchestrator
@@ -200,6 +201,15 @@ class Main(star.Star):
         )
         # Core 判重注册表：独立于 handlers 外层判重（外层已登记的消息不会被 Core 误判）
         self._idem_core = MessageIdempotencyRegistry()
+        # 受信 Attachment Repository（文档 2.4.2）：群图暂存/配对走仓库，Core 只拿 opaque ref
+        self.media_repo = AttachmentRepository(
+            ttl_seconds=float(os.environ.get("DUDUDA_MEDIA_TTL", "60")),
+            max_entries=int(os.environ.get("DUDUDA_MEDIA_MAX_ENTRIES", "100")),
+            max_bytes_per_entry=int(os.environ.get(
+                "DUDUDA_MEDIA_MAX_BYTES", str(20 * 1024 * 1024))),
+            max_total_bytes=int(os.environ.get(
+                "DUDUDA_MEDIA_MAX_TOTAL_BYTES", str(200 * 1024 * 1024))),
+        )
         self.runtime = _ProdOrchestrator(
             plugin=self,
             decision_engine=_ProdDecisionEngine(),
