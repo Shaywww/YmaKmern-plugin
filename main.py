@@ -97,10 +97,10 @@ provider = OpenAIProvider(
 )
 
 
-def _role_cfg(role, effort, tokens, temp=0.7, timeout=30.0):
-    """单角色生产配置：主模型 = MODEL，降级 = FALLBACK_MODEL（文档 2.5.7）。"""
+def _role_cfg(role, effort, tokens, temp=0.7, timeout=30.0, model=None):
+    """单角色生产配置：主模型 = MODEL（可覆盖），降级 = FALLBACK_MODEL（文档 2.5.7）。"""
     return ModelConfig(
-        role=role, model_id=MODEL, reasoning_effort=effort,
+        role=role, model_id=model or MODEL, reasoning_effort=effort,
         max_tokens=tokens, temperature=temp, timeout_seconds=timeout,
         retry_count=1, allow_sensitive=False, route_hint_allowed=False,
         fallback_model_id=FALLBACK_MODEL,
@@ -114,16 +114,12 @@ router_config = RouterConfig(roles={
     ModelRole.DIRECT_CHAT: _role_cfg(ModelRole.DIRECT_CHAT, "medium", 2048),
     ModelRole.RESPONSE_COMPOSITION: _role_cfg(ModelRole.RESPONSE_COMPOSITION, "medium", 2048),
     ModelRole.MEMORY_SUMMARY: _role_cfg(ModelRole.MEMORY_SUMMARY, "low", 1024),
-    ModelRole.IMAGE_UNDERSTANDING: ModelConfig(
-        role=ModelRole.IMAGE_UNDERSTANDING, model_id=VISION_MODEL,
-        reasoning_effort="medium", max_tokens=1024, temperature=0.3,
-        timeout_seconds=90.0, retry_count=1, allow_sensitive=False,
-        route_hint_allowed=False, fallback_model_id=FALLBACK_MODEL),
-    ModelRole.IMAGE_GENERATION: ModelConfig(
-        role=ModelRole.IMAGE_GENERATION, model_id=VISION_MODEL,
-        reasoning_effort="medium", max_tokens=1024, temperature=0.3,
-        timeout_seconds=90.0, retry_count=1, allow_sensitive=False,
-        route_hint_allowed=False, fallback_model_id=FALLBACK_MODEL),
+    ModelRole.IMAGE_UNDERSTANDING: _role_cfg(ModelRole.IMAGE_UNDERSTANDING,
+                                            "medium", 1024, temp=0.3, timeout=90.0,
+                                            model=VISION_MODEL),
+    ModelRole.IMAGE_GENERATION: _role_cfg(ModelRole.IMAGE_GENERATION,
+                                          "medium", 1024, temp=0.3, timeout=90.0,
+                                          model=VISION_MODEL),
 })
 
 # ---- P5: 安全（Policy / 确认 / 脱敏）与 Memory v2 配置 ----
@@ -153,15 +149,12 @@ class _LiveConfig:
             "FALLBACK_MODEL": FALLBACK_MODEL,
             "FALLBACK_KEY": FALLBACK_KEY,
             "FALLBACK_BASE": FALLBACK_BASE,
-            "VISION_MODEL": VISION_MODEL,
-            "VISION_KEY": VISION_KEY,
+            "VISION_MODEL": VISION_MODEL, "VISION_KEY": VISION_KEY,
             "VISION_BASE": VISION_BASE,
             "MEMORY_FILE": MEMORY_FILE,
             "CONFIRM_FILE": CONFIRM_FILE,
-            "OWNER_IDS": OWNER_IDS,
-            "ADMIN_IDS": ADMIN_IDS,
-            "TRUSTED_IDS": TRUSTED_IDS,
-            "MUTED_IDS": MUTED_IDS,
+            "OWNER_IDS": OWNER_IDS, "ADMIN_IDS": ADMIN_IDS,
+            "TRUSTED_IDS": TRUSTED_IDS, "MUTED_IDS": MUTED_IDS,
         }[key]
 
 
@@ -344,13 +337,17 @@ class Main(star.Star):
             max_tokens=1024, temperature=0.9,
             run_id=run_id, trace_id=trace_id, skip_render=True)
 
-    async def _perception_signal(self, text: str):
-        """模型感知信号（DUDUDA_PERCEPTION_MODEL=1 启用；失败返回 None）。"""
+    async def _perception_signal(self, text: str, capabilities=()):
+        """模型感知信号（DUDUDA_PERCEPTION_MODEL=1 启用；失败返回 None）。带能力清单输出 tool_plan。"""
         if not getattr(self, "_perception_model_enabled", False):
             return None
         try:
+            user_msg = text
+            if capabilities:
+                cap_lines = "\n".join(f"- {c}" for c in list(capabilities)[:20])
+                user_msg = f"可用工具:\n{cap_lines}\n\n用户消息: {text}"
             reply = await self._call_llm(
-                PERCEPTION_SYSTEM_PROMPT, text,
+                PERCEPTION_SYSTEM_PROMPT, user_msg,
                 max_tokens=512, temperature=0.0, skip_render=True)
             if not reply or not reply.strip():
                 return None
