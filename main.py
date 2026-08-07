@@ -137,7 +137,7 @@ GROUP_POLICY_FILE = os.environ.get(
     os.path.join(_PLUGIN_DATA_DIR, "data", "group_policy.json"))
 STYLE_FILE = os.environ.get("DUDUDA_STYLE_FILE",
                          os.path.join(_PLUGIN_DATA_DIR, "data", "styles.json"))
-PERCEPTION_MODEL_ENABLED = os.environ.get("DUDUDA_PERCEPTION_MODEL", "0") == "1"
+PERCEPTION_MODEL_ENABLED = os.environ.get("DUDUDA_PERCEPTION_MODEL", "1") == "1"
 OWNER_IDS = {x.strip() for x in os.environ.get("DUDUDA_OWNER_IDS", "").split(",") if x.strip()}
 ADMIN_IDS = {x.strip() for x in os.environ.get("DUDUDA_ADMIN_IDS", "").split(",") if x.strip()}
 TRUSTED_IDS = {x.strip() for x in os.environ.get("DUDUDA_TRUSTED_IDS", "").split(",") if x.strip()}
