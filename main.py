@@ -71,13 +71,21 @@ logger = _get_logger("dududa20")
 API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 MODEL   = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 
+def _normalize_base(url: str) -> str:
+    """OpenAI 兼容网关要求 /v1 路径；host 根路径通常是管理面板而非 API。"""
+    url = (url or "").strip().rstrip("/")
+    if url and url.count("/") == 2:
+        return url + "/v1"
+    return url
+
+
 VISION_KEY   = os.environ.get("OPENAI_API_KEY", API_KEY)
 VISION_MODEL = os.environ.get("VISION_MODEL", "claude-haiku-4-5-20251001")
-VISION_BASE  = os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.xyz/v1")
+VISION_BASE  = _normalize_base(os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.xyz/v1"))
 
 FALLBACK_MODEL = os.environ.get("FALLBACK_MODEL", "gpt-5.5")
 FALLBACK_KEY   = os.environ.get("FALLBACK_KEY", VISION_KEY)
-FALLBACK_BASE  = os.environ.get("FALLBACK_BASE", VISION_BASE)
+FALLBACK_BASE  = _normalize_base(os.environ.get("FALLBACK_BASE", VISION_BASE))
 
 # ---- Model Router（文档 2.5.7：八类角色统一路由 + 降级）----
 ROUTER_ENABLED = os.environ.get("DUDUDA_ROUTER", "1") == "1"
