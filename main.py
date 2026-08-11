@@ -8,7 +8,7 @@
 - packages/application/dududa_commands.py：管理命令；
 - packages/application/dududa_prod.py：生产 Orchestrator / 决策 / CapProvider。
 """
-import sys, os, re, time, logging, asyncio, httpx, json as _json, base64 as _b64
+import sys, os, re, time, logging, httpx, json as _json, base64 as _b64
 from io import BytesIO
 sys.path.insert(0, "/opt/dududa20-prototype/packages/dududa-agent/src")
 
@@ -58,7 +58,6 @@ from dududa.application.dududa_prod import (
 )
 from dududa.application.dududa_core import DududaCore, persona_to_oc
 from dududa.application import dududa_commands, dududa_handlers
-from dududa.application.update_pusher import build_update_push, startup_push_loop
 from dududa.application.dududa_log import get_logger as _get_logger
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path:
@@ -176,8 +175,6 @@ class Main(star.Star):
                 _PLUGIN_DATA_DIR, "data", "budget.json"))
         self.memory = JSONMemoryRepository(path=MEMORY_FILE)
         self.cap_registry = CapabilityRegistry()
-        self.notice_store, self.update_pusher = build_update_push(
-            context, _PLUGIN_DATA_DIR)
         self.profile_store = ProfileStore(path=os.environ.get(
             "DUDUDA_PROFILE_FILE",
             os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
@@ -407,10 +404,6 @@ class Main(star.Star):
         except Exception as e:
             logger.warning("MCP registration failed: %s", e)
 
-    async def initialize(self) -> None:
-        if getattr(self, "update_pusher", None) is not None:
-            asyncio.create_task(startup_push_loop(self.update_pusher))
-
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_message(self, event: AstrMessageEvent):
         reply = await dududa_handlers.run_message_flow(self, event)
@@ -500,14 +493,3 @@ class Main(star.Star):
     @filter.command("dududa_forget")
     async def cmd_forget(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_forget_impl(self, event))
-
-
-    @filter.command("dududa_announce")
-    async def cmd_announce(self, event: AstrMessageEvent, content: str = None):
-        yield event.plain_result(await dududa_commands.cmd_announce_impl(
-            self, event, content))
-
-    @filter.command("dududa_announce_status")
-    async def cmd_announce_status(self, event: AstrMessageEvent):
-        yield event.plain_result(await dududa_commands.cmd_announce_status_impl(
-            self, event))
