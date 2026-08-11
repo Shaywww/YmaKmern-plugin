@@ -133,10 +133,6 @@ GROUP_POLICY_FILE = os.environ.get(
     os.path.join(_PLUGIN_DATA_DIR, "data", "group_policy.json"))
 STYLE_FILE = os.environ.get("DUDUDA_STYLE_FILE",
                          os.path.join(_PLUGIN_DATA_DIR, "data", "styles.json"))
-NOTICE_FILE = os.environ.get(
-    "DUDUDA_NOTICE_FILE",
-    os.path.join(_PLUGIN_DATA_DIR, "data", "update_notice.json"))
-UPDATE_PUSH_ENABLED = os.environ.get("DUDUDA_UPDATE_PUSH", "1") == "1"
 PERCEPTION_MODEL_ENABLED = os.environ.get("DUDUDA_PERCEPTION_MODEL", "1") == "1"
 OWNER_IDS = {x.strip() for x in os.environ.get("DUDUDA_OWNER_IDS", "").split(",") if x.strip()}
 ADMIN_IDS = {x.strip() for x in os.environ.get("DUDUDA_ADMIN_IDS", "").split(",") if x.strip()}
@@ -179,11 +175,9 @@ class Main(star.Star):
                 _PLUGIN_DATA_DIR, "data", "budget.json"))
         self.memory = JSONMemoryRepository(path=MEMORY_FILE)
         self.cap_registry = CapabilityRegistry()
-        from dududa.application.update_pusher import UpdateNoticeStore, UpdatePusher
-        self.notice_store = UpdateNoticeStore(NOTICE_FILE)
-        self.update_pusher = (UpdatePusher(
-            self.notice_store, context.platform_manager)
-            if UPDATE_PUSH_ENABLED else None)
+        from dududa.application.update_pusher import build_update_push, startup_push_loop
+        self.notice_store, self.update_pusher = build_update_push(
+            context, _PLUGIN_DATA_DIR)
         self.profile_store = ProfileStore(path=os.environ.get(
             "DUDUDA_PROFILE_FILE",
             os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
@@ -414,28 +408,8 @@ class Main(star.Star):
             logger.warning("MCP registration failed: %s", e)
 
     async def initialize(self) -> None:
-        """AstrBot 生命周期钩子：启动后检查待推送的更新公告。"""
-        if (UPDATE_PUSH_ENABLED
-                and getattr(self, "update_pusher", None) is not None):
-            asyncio.create_task(self._startup_update_push())
-
-    async def _startup_update_push(self) -> None:
-        """后台重试：适配器未就绪时每 30s 重试，最多 10 次。"""
-        for attempt in range(1, 11):
-            try:
-                report = await self.update_pusher.push_pending()
-            except Exception as e:
-                logger.warning("Update push attempt %d failed: %s", attempt, e)
-                await asyncio.sleep(30)
-                continue
-            if report.get("skipped") == "no_pending":
-                return
-            if report.get("friends") is not None:
-                logger.info("Update notice pushed: %s", report)
-                return
-            logger.warning("Update push attempt %d: %s", attempt,
-                           report.get("error") or report.get("skipped"))
-            await asyncio.sleep(30)
+        if getattr(self, "update_pusher", None) is not None:
+            asyncio.create_task(startup_push_loop(self.update_pusher))
 
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_message(self, event: AstrMessageEvent):
@@ -530,11 +504,10 @@ class Main(star.Star):
 
     @filter.command("dududa_announce")
     async def cmd_announce(self, event: AstrMessageEvent, content: str = None):
-        """管理员：写入更新公告并立即推送给机器人好友。"""
-        yield event.plain_result(
-            await dududa_commands.cmd_announce_impl(self, event, content))
+        yield event.plain_result(await dududa_commands.cmd_announce_impl(
+            self, event, content))
 
     @filter.command("dududa_announce_status")
     async def cmd_announce_status(self, event: AstrMessageEvent):
-        yield event.plain_result(
-            await dududa_commands.cmd_announce_status_impl(self, event))
+        yield event.plain_result(await dududa_commands.cmd_announce_status_impl(
+            self, event))
