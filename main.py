@@ -58,6 +58,7 @@ from dududa.application.dududa_prod import (
 )
 from dududa.application.dududa_core import DududaCore, persona_to_oc
 from dududa.application import dududa_commands, dududa_handlers
+from dududa.application.update_pusher import build_update_push, startup_push_loop
 from dududa.application.dududa_log import get_logger as _get_logger
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path:
@@ -175,7 +176,6 @@ class Main(star.Star):
                 _PLUGIN_DATA_DIR, "data", "budget.json"))
         self.memory = JSONMemoryRepository(path=MEMORY_FILE)
         self.cap_registry = CapabilityRegistry()
-        from dududa.application.update_pusher import build_update_push, startup_push_loop
         self.notice_store, self.update_pusher = build_update_push(
             context, _PLUGIN_DATA_DIR)
         self.profile_store = ProfileStore(path=os.environ.get(
