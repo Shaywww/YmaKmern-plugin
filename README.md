@@ -18,6 +18,24 @@
 
 > 按主题分组，最新改动在前。
 
+### 0.2.0 用户体验
+
+- 慢任务 3 秒后主动提示当前阶段，支持 `/dududa_cancel` 取消；同一用户/会话只运行一个任务
+- 首次主动私聊附带一次极简引导，不在加好友时推送，也不在群聊打扰
+- `/dududa_memory` 支持查看本人记忆、删除单条/全部、暂停写入和临时无记忆对话
+- `/dududa_subscribe` 提供显式订阅、退订和免打扰；默认不订阅、每日最多 1 条
+- 管理员推送必须先预览再确认，并在发送前再次检查退订、免打扰和频率限制
+- `/dududa_help` 根据实际 Provider 健康状态生成帮助；模型双线路失败返回可检索错误编号
+
+常用命令：
+
+```text
+/dududa_help
+/dududa_cancel
+/dududa_memory list|active|paused|temporary|delete <ID>|clear
+/dududa_subscribe add 更新|remove 更新|quiet 22:30-08:00
+```
+
 ### 感知与规划
 
 - 默认启用模型感知（DUDUDA_PERCEPTION_MODEL=1）

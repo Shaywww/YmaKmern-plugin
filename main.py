@@ -13,7 +13,7 @@ from io import BytesIO
 sys.path.insert(0, "/opt/dududa20-prototype/packages/dududa-agent/src")
 
 from astrbot.api import star
-from astrbot.api.event import filter, AstrMessageEvent
+from astrbot.api.event import filter, AstrMessageEvent, MessageChain
 from astrbot.api.all import *
 
 from dududa.router.openai_provider import OpenAIProvider
@@ -58,6 +58,9 @@ from dududa.application.dududa_prod import (
 )
 from dududa.application.dududa_core import DududaCore, persona_to_oc
 from dududa.application import dududa_commands, dududa_handlers
+from dududa.application.user_experience import (
+    UserExperienceStore, ConversationTaskRegistry,
+)
 from dududa.application.dududa_log import get_logger as _get_logger
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path:
@@ -133,6 +136,8 @@ GROUP_POLICY_FILE = os.environ.get(
     os.path.join(_PLUGIN_DATA_DIR, "data", "group_policy.json"))
 STYLE_FILE = os.environ.get("DUDUDA_STYLE_FILE",
                          os.path.join(_PLUGIN_DATA_DIR, "data", "styles.json"))
+UX_FILE = os.environ.get("DUDUDA_UX_FILE",
+                        os.path.join(_PLUGIN_DATA_DIR, "data", "user_experience.json"))
 PERCEPTION_MODEL_ENABLED = os.environ.get("DUDUDA_PERCEPTION_MODEL", "1") == "1"
 OWNER_IDS = {x.strip() for x in os.environ.get("DUDUDA_OWNER_IDS", "").split(",") if x.strip()}
 ADMIN_IDS = {x.strip() for x in os.environ.get("DUDUDA_ADMIN_IDS", "").split(",") if x.strip()}
@@ -180,6 +185,10 @@ class Main(star.Star):
             os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
         self.group_policy = GroupPolicyStore(path=GROUP_POLICY_FILE)
         self.style_store = UserStyleStore(path=STYLE_FILE)
+        self.ux_store = UserExperienceStore(path=UX_FILE)
+        self.ux_tasks = ConversationTaskRegistry()
+        self.progress_delay = float(os.environ.get("DUDUDA_PROGRESS_DELAY", "3"))
+        self._pending_broadcasts = {}
         self._perception_model_enabled = PERCEPTION_MODEL_ENABLED
         self.context_builder = ContextBuilder(
             memory_repo=self.memory, capability_registry=self.cap_registry,
@@ -427,6 +436,14 @@ class Main(star.Star):
     async def _handle_text(self, event):
         return await dududa_handlers.handle_text(self, event)
 
+    async def _send_progress(self, event, text: str):
+        """Send a non-terminal status update through the current adapter."""
+        await event.send(event.plain_result(text))
+
+    async def _send_subscription_message(self, origin: str, text: str):
+        """Send only to a stored origin belonging to an explicit subscriber."""
+        await self.context.send_message(origin, MessageChain().message(text))
+
 
     @filter.command("dududa")
     async def cmd_status(self, event: AstrMessageEvent):
@@ -493,3 +510,48 @@ class Main(star.Star):
     @filter.command("dududa_forget")
     async def cmd_forget(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_forget_impl(self, event))
+
+    @filter.command("dududa_help", alias={"嘟嘟哒帮助"})
+    async def cmd_help(self, event: AstrMessageEvent):
+        """查看当前真正可用的能力和常用命令。"""
+        yield event.plain_result(await dududa_commands.cmd_help_impl(self))
+
+    @filter.command("dududa_cancel", alias={"取消任务"})
+    async def cmd_cancel(self, event: AstrMessageEvent):
+        """取消当前会话正在执行的慢任务。"""
+        yield event.plain_result(await dududa_commands.cmd_cancel_impl(self, event))
+
+    @filter.command("dududa_memory", alias={"我的记忆"})
+    async def cmd_memory(self, event: AstrMessageEvent,
+                         action: str = "status", record_id: str = None):
+        """查看、删除或暂停自己的记忆。"""
+        yield event.plain_result(await dududa_commands.cmd_memory_impl(
+            self, event, action, record_id))
+
+    @filter.command("dududa_subscribe", alias={"订阅管理"})
+    async def cmd_subscribe(self, event: AstrMessageEvent,
+                            action: str = "list", topic: str = "更新"):
+        """显式订阅、退订以及设置免打扰时间。"""
+        yield event.plain_result(await dududa_commands.cmd_subscribe_impl(
+            self, event, action, topic))
+
+    @filter.command("dududa_broadcast")
+    async def cmd_broadcast(self, event: AstrMessageEvent,
+                            topic: str = None, message: str = None):
+        """管理员生成订阅推送预览，不会立即发送。"""
+        raw = str(getattr(event, "message_str", "") or "").strip()
+        parts = raw.split(maxsplit=2)
+        if len(parts) >= 3:
+            topic, message = parts[1], parts[2]
+        yield event.plain_result(await dududa_commands.cmd_broadcast_prepare_impl(
+            self, event, topic, message))
+
+    @filter.command("dududa_broadcast_confirm")
+    async def cmd_broadcast_confirm(self, event: AstrMessageEvent,
+                                    broadcast_id: str = None):
+        """管理员确认向符合条件的显式订阅者发送预览。"""
+        yield event.plain_result(await dududa_commands.cmd_broadcast_confirm_impl(
+            self, event, broadcast_id))
+
+    async def terminate(self):
+        self.ux_tasks.cancel_all()
