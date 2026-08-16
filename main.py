@@ -11,11 +11,9 @@
 import sys, os, re, time, logging, httpx, json as _json, base64 as _b64
 from io import BytesIO
 sys.path.insert(0, "/opt/dududa20-prototype/packages/dududa-agent/src")
-
 from astrbot.api import star
 from astrbot.api.event import filter, AstrMessageEvent, MessageChain
 from astrbot.api.all import *
-
 from dududa.router.openai_provider import OpenAIProvider
 from dududa.router.router import ModelConfig, ModelRole, RouterConfig, ModelRouter
 from dududa.core.persona.registry import PersonaRegistry
@@ -42,12 +40,10 @@ from dududa.core.attachment_repo import AttachmentRepository
 from dududa.core.profile import ProfileStore
 from dududa.core.group_policy import GroupPolicyStore
 from dududa.core.style_store import UserStyleStore
-from dududa.evolution import ShadowEvolution
 from dududa.core.structured_output import PERCEPTION_SYSTEM_PROMPT
 from dududa.mcp.registry import register_all_mcp_services
 from dududa.planner.integration import integrate_with_orchestrator
 from dududa.adapters.astrbot.input_adapter import AstrBotInputAdapter, ActorMappingConfig
-
 from dududa.application.dududa_utils import (
     _redact_text, _contains_restricted, _atomic_write_json,
     _group_safe_observations, _detect_media, _has_media_in_raw,
@@ -68,7 +64,6 @@ if _PLUGIN_DIR not in sys.path:
     sys.path.insert(0, _PLUGIN_DIR)
 from _router import router as _model_router
 router = _model_router
-
 
 logger = _get_logger("dududa20")
 
@@ -187,7 +182,6 @@ class Main(star.Star):
         self.group_policy = GroupPolicyStore(path=GROUP_POLICY_FILE)
         self.style_store = UserStyleStore(path=STYLE_FILE)
         self.ux_store = UserExperienceStore(path=UX_FILE)
-        self.evolution = ShadowEvolution()
         self.ux_tasks = ConversationTaskRegistry()
         self.progress_delay = float(os.environ.get("DUDUDA_PROGRESS_DELAY", "5"))
         self._pending_broadcasts = {}
@@ -520,13 +514,9 @@ class Main(star.Star):
 
     @filter.command("dududa_feedback", alias={"问题反馈"})
     async def cmd_feedback(self, event: AstrMessageEvent, summary: str = None):
-        """主动提交脱敏改进反馈，不触发自动修改或部署。"""
         raw = str(getattr(event, "message_str", "") or "").strip()
-        parts = raw.split(maxsplit=1)
-        if len(parts) == 2:
-            summary = parts[1]
-        yield event.plain_result(await dududa_commands.cmd_feedback_impl(
-            self, summary or ""))
+        summary = raw.partition(" ")[2].strip() or summary or ""
+        yield event.plain_result(await dududa_commands.cmd_feedback_impl(self, summary))
 
     @filter.command("dududa_cancel", alias={"取消任务"})
     async def cmd_cancel(self, event: AstrMessageEvent):
