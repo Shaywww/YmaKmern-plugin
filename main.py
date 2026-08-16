@@ -187,7 +187,7 @@ class Main(star.Star):
         self.style_store = UserStyleStore(path=STYLE_FILE)
         self.ux_store = UserExperienceStore(path=UX_FILE)
         self.ux_tasks = ConversationTaskRegistry()
-        self.progress_delay = float(os.environ.get("DUDUDA_PROGRESS_DELAY", "3"))
+        self.progress_delay = float(os.environ.get("DUDUDA_PROGRESS_DELAY", "5"))
         self._pending_broadcasts = {}
         self._perception_model_enabled = PERCEPTION_MODEL_ENABLED
         self.context_builder = ContextBuilder(
