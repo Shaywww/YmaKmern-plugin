@@ -18,6 +18,12 @@
 
 > 按主题分组，最新改动在前。
 
+### 0.2.7 影子进化
+
+- 新增 `/dududa_feedback <问题说明>`：用户可主动提交脱敏改进反馈，不保存身份、会话或原始附件
+- 同类问题累计到门槛后只生成待人工审核的 Skill 候选，不会自动修改、启用或部署机器人
+- 控制台可查看经验与候选、扫描失败轨迹并做实现审批，审批与线上发布严格分离
+
 ### 0.2.6 天气地点一致性
 
 - 识别“我现在在/目前在/人在某地”等当前位置表达，并写入结构化用户画像
@@ -68,6 +74,7 @@
 ```text
 /dududa_help
 /dududa_cancel
+/dududa_feedback <问题说明>
 /dududa_memory list|active|paused|temporary|delete <ID>|clear
 /dududa_subscribe add 更新|remove 更新|quiet 22:30-08:00
 ```
