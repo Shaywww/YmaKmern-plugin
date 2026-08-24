@@ -96,7 +96,6 @@ provider = OpenAIProvider(
     api_keys={FALLBACK_MODEL: FALLBACK_KEY, VISION_MODEL: VISION_KEY},
 )
 
-
 def _role_cfg(role, effort, tokens, temp=0.7, timeout=30.0, model=None):
     """单角色生产配置：主模型 = MODEL（可覆盖），降级 = FALLBACK_MODEL（文档 2.5.7）。"""
     return ModelConfig(
@@ -121,7 +120,6 @@ router_config = RouterConfig(roles={
                                           "medium", 1024, temp=0.3, timeout=90.0,
                                           model=VISION_MODEL),
 })
-
 # ---- P5: 安全（Policy / 确认 / 脱敏）与 Memory v2 配置 ----
 _PLUGIN_DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 MEMORY_FILE = os.environ.get("DUDUDA_MEMORY_FILE",
@@ -140,10 +138,6 @@ OWNER_IDS = {x.strip() for x in os.environ.get("DUDUDA_OWNER_IDS", "").split(","
 ADMIN_IDS = {x.strip() for x in os.environ.get("DUDUDA_ADMIN_IDS", "").split(",") if x.strip()}
 TRUSTED_IDS = {x.strip() for x in os.environ.get("DUDUDA_TRUSTED_IDS", "").split(",") if x.strip()}
 MUTED_IDS = {x.strip() for x in os.environ.get("DUDUDA_MUTED_IDS", "").split(",") if x.strip()}
-GROUP_IGNORED_SENDER_IDS = {
-    x.strip() for x in os.environ.get(
-        "DUDUDA_GROUP_IGNORED_SENDER_IDS", "").split(",") if x.strip()
-}
 
 # 应用用例层配置：动态代理（每次读取当前模块常量，monkeypatch 兼容）
 class _LiveConfig:
@@ -185,22 +179,7 @@ class Main(star.Star):
             "DUDUDA_PROFILE_FILE",
             os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
         self.group_policy = GroupPolicyStore(path=GROUP_POLICY_FILE)
-        self.group_ingress_guard = GroupIngressGuard(
-            ignored_sender_ids=GROUP_IGNORED_SENDER_IDS,
-            repeat_window_seconds=float(os.environ.get(
-                "DUDUDA_LOOP_REPEAT_WINDOW", "15")),
-            repeat_threshold=int(os.environ.get(
-                "DUDUDA_LOOP_REPEAT_THRESHOLD", "3")),
-            burst_window_seconds=float(os.environ.get(
-                "DUDUDA_LOOP_BURST_WINDOW", "10")),
-            burst_threshold=int(os.environ.get(
-                "DUDUDA_LOOP_BURST_THRESHOLD", "6")),
-            sender_quarantine_ttl_seconds=float(os.environ.get(
-                "DUDUDA_LOOP_SENDER_TTL", "60")),
-            group_circuit_ttl_seconds=float(os.environ.get(
-                "DUDUDA_LOOP_GROUP_TTL", "30")),
-            max_keys=int(os.environ.get("DUDUDA_LOOP_MAX_KEYS", "4096")),
-        )
+        self.group_ingress_guard = GroupIngressGuard.from_env()
         self.style_store = UserStyleStore(path=STYLE_FILE)
         self.ux_store = UserExperienceStore(path=UX_FILE)
         self.ux_tasks = ConversationTaskRegistry()
@@ -256,10 +235,7 @@ class Main(star.Star):
         self.mcp_client = None
         self._register_builtin_caps()
         self._register_mcp_caps()
-        logger.info(
-            "Dududa 2.0 | renderer=OK | memory=JSON | vision=%s | "
-            "security=ON | group_guard=%d",
-            VISION_MODEL, len(GROUP_IGNORED_SENDER_IDS))
+        logger.info("Dududa 2.0 | renderer=OK | memory=JSON | vision=%s | security=ON", VISION_MODEL)
 
     # ---- 薄壳：委托应用用例层（保持测试与 _Prod* 兼容） ----
 
@@ -310,13 +286,7 @@ class Main(star.Star):
     def _group_policy_view(self, event):
         """当前群 PolicyView 投影（供 ContextBuilder / Runtime 使用）。"""
         try:
-            obj = getattr(event, "message_obj", None)
-            raw_group = (getattr(event, "group_id", None)
-                         or getattr(obj, "group_id", None)
-                         or getattr(obj, "group", None))
-            gid = str(getattr(raw_group, "group_id", None)
-                      or getattr(raw_group, "id", None)
-                      or raw_group or "")
+            gid = str(getattr(event.message_obj, "group", None) or "")
             if not gid:
                 return None
             return self.group_policy.to_policy_view(gid)
