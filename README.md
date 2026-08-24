@@ -18,6 +18,15 @@
 
 > 按主题分组，最新改动在前。
 
+### 0.2.9 群消息入口保护
+
+- 未点名的普通群消息在创建进度任务、Trace 和模型调用前结束，避免无关群聊占用任务并向旁观者返回“上一条仍在处理”
+- 未点名图片仍按群和发送者轻量暂存，供 QQ 拆条后的同一发送者点名消息配对；已配置的机器人发送者不会污染暂存区
+- 新增静态机器人忽略名单与重复/爆发/群回声熔断；动态熔断期间，真人精确 `@` 嘟嘟哒仍可正常使用
+- 纯 `@` 拆条窗口按平台、群、发送者和 Bot 隔离且只消费一次，不会把甲的点名错误继承给乙
+
+生产环境可用 `DUDUDA_GROUP_IGNORED_SENDER_IDS` 配置逗号分隔的外部机器人 QQ 号；动态参数可按需通过 `DUDUDA_LOOP_REPEAT_WINDOW`、`DUDUDA_LOOP_REPEAT_THRESHOLD`、`DUDUDA_LOOP_BURST_WINDOW`、`DUDUDA_LOOP_BURST_THRESHOLD`、`DUDUDA_LOOP_SENDER_TTL`、`DUDUDA_LOOP_GROUP_TTL` 和 `DUDUDA_LOOP_MAX_KEYS` 调整。
+
 ### 0.2.8 单一回复出口
 
 - Dududa 使用独立模型路由时显式关闭 AstrBot 默认 Agent 兜底，避免同一 QQ 账号突然切换成通用助手人格
