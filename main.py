@@ -40,6 +40,7 @@ from dududa.core.attachment_repo import AttachmentRepository
 from dududa.core.profile import ProfileStore
 from dududa.core.group_policy import GroupPolicyStore
 from dududa.core.group_ingress_guard import GroupIngressGuard
+from dududa.core.group_ambient import GroupAmbientTracker
 from dududa.core.style_store import UserStyleStore
 from dududa.core.structured_output import PERCEPTION_SYSTEM_PROMPT
 from dududa.mcp.registry import register_all_mcp_services
@@ -129,6 +130,9 @@ CONFIRM_FILE = os.environ.get("DUDUDA_CONFIRM_FILE",
 GROUP_POLICY_FILE = os.environ.get(
     "DUDUDA_GROUP_POLICY_FILE",
     os.path.join(_PLUGIN_DATA_DIR, "data", "group_policy.json"))
+GROUP_AMBIENT_FILE = os.environ.get(
+    "DUDUDA_GROUP_AMBIENT_FILE",
+    os.path.join(_PLUGIN_DATA_DIR, "data", "group_ambient.json"))
 STYLE_FILE = os.environ.get("DUDUDA_STYLE_FILE",
                          os.path.join(_PLUGIN_DATA_DIR, "data", "styles.json"))
 UX_FILE = os.environ.get("DUDUDA_UX_FILE",
@@ -180,6 +184,7 @@ class Main(star.Star):
             os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
         self.group_policy = GroupPolicyStore(path=GROUP_POLICY_FILE)
         self.group_ingress_guard = GroupIngressGuard.from_env()
+        self.group_ambient = GroupAmbientTracker(state_path=GROUP_AMBIENT_FILE)
         self.style_store = UserStyleStore(path=STYLE_FILE)
         self.ux_store = UserExperienceStore(path=UX_FILE)
         self.ux_tasks = ConversationTaskRegistry()
@@ -498,6 +503,13 @@ class Main(star.Star):
                                        group_id: str = None, cost: str = None):
         yield event.plain_result(await dududa_commands.cmd_group_interrupt_cost_impl(
             self, event, group_id, cost))
+
+    @filter.command("dududa_ambient")
+    async def cmd_group_ambient(self, event: AstrMessageEvent,
+                                action: str = "status"):
+        """群管理员控制忙碌群聊中的问题补位，默认关闭。"""
+        yield event.plain_result(await dududa_commands.cmd_group_ambient_impl(
+            self, event, action))
 
     @filter.command("dududa_style")
     async def cmd_style(self, event: AstrMessageEvent):
