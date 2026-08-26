@@ -18,6 +18,12 @@
 
 > 按主题分组，最新改动在前。
 
+### 0.3.2 GPT 中转域名迁移
+
+- GPT 视觉与备用模型的默认 OpenAI 兼容地址迁移至 `https://www.mhcoding.ai/v1`
+- DeepSeek 主模型继续直连官方 `https://api.deepseek.com/v1`，不经过 GPT 中转
+- 生产密钥只保存在 systemd 环境配置中，不提交到仓库
+
 ### 0.3.1 可控群聊问题补位
 
 - 新增 `/dududa_ambient on|off|status`，仅当前群的群主、群管理员或机器人管理员可以开关，默认关闭

@@ -18,7 +18,7 @@ class ModelRouter:
     def __init__(self):
         deepseek_key = os.environ.get("DEEPSEEK_API_KEY", "")
         openai_key   = os.environ.get("OPENAI_API_KEY", deepseek_key)
-        openai_base  = os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.xyz")
+        openai_base  = os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.ai")
 
         self.routes = {
             "text": [

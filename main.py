@@ -74,7 +74,7 @@ MODEL   = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 
 VISION_KEY   = os.environ.get("OPENAI_API_KEY", API_KEY)
 VISION_MODEL = os.environ.get("VISION_MODEL", "claude-haiku-4-5-20251001")
-VISION_BASE  = os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.xyz/v1")
+VISION_BASE  = os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.ai/v1")
 
 FALLBACK_MODEL = os.environ.get("FALLBACK_MODEL", "gpt-5.5")
 FALLBACK_KEY   = os.environ.get("FALLBACK_KEY", VISION_KEY)
