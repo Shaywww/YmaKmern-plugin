@@ -41,6 +41,8 @@ from dududa.core.profile import ProfileStore
 from dududa.core.group_policy import GroupPolicyStore
 from dududa.core.group_ingress_guard import GroupIngressGuard
 from dududa.core.group_ambient import GroupAmbientTracker
+from dududa.core.group_context import GroupConversationTracker
+from dududa.core.meme_library import MemeLibrary
 from dududa.core.style_store import UserStyleStore
 from dududa.core.structured_output import PERCEPTION_SYSTEM_PROMPT
 from dududa.mcp.registry import register_all_mcp_services
@@ -133,6 +135,9 @@ GROUP_POLICY_FILE = os.environ.get(
 GROUP_AMBIENT_FILE = os.environ.get(
     "DUDUDA_GROUP_AMBIENT_FILE",
     os.path.join(_PLUGIN_DATA_DIR, "data", "group_ambient.json"))
+MEME_FILE = os.environ.get(
+    "DUDUDA_MEME_FILE",
+    os.path.join(_PLUGIN_DATA_DIR, "data", "meme_library.json"))
 STYLE_FILE = os.environ.get("DUDUDA_STYLE_FILE",
                          os.path.join(_PLUGIN_DATA_DIR, "data", "styles.json"))
 UX_FILE = os.environ.get("DUDUDA_UX_FILE",
@@ -185,6 +190,9 @@ class Main(star.Star):
         self.group_policy = GroupPolicyStore(path=GROUP_POLICY_FILE)
         self.group_ingress_guard = GroupIngressGuard.from_env()
         self.group_ambient = GroupAmbientTracker(state_path=GROUP_AMBIENT_FILE)
+        self.group_context = GroupConversationTracker(
+            capacity=7, ttl_seconds=300)
+        self.meme_library = MemeLibrary(state_path=MEME_FILE)
         self.style_store = UserStyleStore(path=STYLE_FILE)
         self.ux_store = UserExperienceStore(path=UX_FILE)
         self.ux_tasks = ConversationTaskRegistry()
@@ -367,9 +375,10 @@ class Main(star.Star):
             return None
 
     async def _call_vision(self, system, user_text, image_b64, mime,
-                           run_id="", trace_id=""):
+                           run_id="", trace_id="", skip_render=False):
         return await self._core._call_vision(
-            system, user_text, image_b64, mime, run_id=run_id, trace_id=trace_id)
+            system, user_text, image_b64, mime, run_id=run_id,
+            trace_id=trace_id, skip_render=skip_render)
 
     @staticmethod
     def _deny_hint(res, conf) -> str:
@@ -510,6 +519,12 @@ class Main(star.Star):
         """群管理员控制忙碌群聊中的问题补位，默认关闭。"""
         yield event.plain_result(await dududa_commands.cmd_group_ambient_impl(
             self, event, action))
+
+    @filter.command("dududa_meme")
+    async def cmd_group_meme(self, event: AstrMessageEvent):
+        """Review and maintain this group's custom meme dictionary."""
+        yield event.plain_result(await dududa_commands.cmd_group_meme_impl(
+            self, event))
 
     @filter.command("dududa_style")
     async def cmd_style(self, event: AstrMessageEvent):

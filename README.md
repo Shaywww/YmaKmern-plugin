@@ -18,6 +18,14 @@
 
 > 按主题分组，最新改动在前。
 
+### 0.4.0 群聊语境与多模态接梗
+
+- 自然参与群独立维护最近 7 条真人消息，5 分钟无消息自动清空；上下文只驻留内存，QQ 号替换成临时成员别名
+- 基础梗、热梗和群自定义梗支持拼音近似初筛，命中后仍由 DeepSeek 判断场景、是否在玩梗及是否适合插话；认真讨论、低置信度和异常输出全部保持沉默
+- 被点名图片可结合最近群聊理解；未点名图片只在闲聊上下文或至少两人连续发表情包时进入 GPT 视觉摘要，再交给 DeepSeek 决定是否接话
+- 新增 `/dududa_meme list|candidates|add|remove` 管理命令；陌生短语候选只保存脱敏短语与次数，必须由管理员审核后才能进入本群梗库
+- 接梗、场景回应与其他主动发言继续共用每群 30 分钟冷却和每天 2 次限额
+
 ### 0.3.4 低频话题插话
 
 - 自然参与开启后，可在外卖、下班、奶茶、摸鱼和电影等少量人设话题中低概率接一句
@@ -126,6 +134,7 @@
 /dududa_memory list|active|paused|temporary|delete <ID>|clear
 /dududa_subscribe add 更新|remove 更新|quiet 22:30-08:00
 /dududa_ambient on|off|status
+/dududa_meme list|candidates|add 梗词 | 含义 | 别名1,别名2|remove 梗词
 ```
 
 ### 感知与规划
