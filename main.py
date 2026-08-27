@@ -458,127 +458,95 @@ class Main(star.Star):
     @filter.command("dududa")
     async def cmd_status(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_status_impl(self))
-
     @filter.command("dududa_mcp")
     async def cmd_mcp(self, event: AstrMessageEvent):
-        """统一 MCP Client 状态（启用 DUDUDA_MCP_CLIENT=1 后生效）。"""
         yield event.plain_result(await dududa_commands.cmd_mcp_impl(self))
-
     @filter.command("dududa_health")
     async def cmd_health(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_health_impl(self))
-
     @filter.command("dududa_persona")
     async def cmd_persona(self, event: AstrMessageEvent, target: str = None):
         yield event.plain_result(await dududa_commands.cmd_persona_impl(self, event, target))
-
     @filter.command("dududa_confirm")
     async def cmd_confirm(self, event: AstrMessageEvent, confirmation_id: str = None):
-        """管理员批准高风险操作确认（绑定发起者/会话/操作内容，单次使用）。"""
         yield event.plain_result(await dududa_commands.cmd_confirm_impl(self, event, confirmation_id))
-
     @filter.command("dududa_off")
     async def cmd_off(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_off_impl(self, event))
-
     @filter.command("dududa_on")
     async def cmd_on(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_on_impl(self, event))
-
     @filter.command("dududa_group")
     async def cmd_group(self, event: AstrMessageEvent, target: str = None):
         yield event.plain_result(await dududa_commands.cmd_group_impl(self, event, target))
-
     @filter.command("dududa_mode")
     async def cmd_group_mode(self, event: AstrMessageEvent,
                              group_id: str = None, mode: str = None):
         yield event.plain_result(await dududa_commands.cmd_group_mode_impl(
             self, event, group_id, mode))
-
     @filter.command("dududa_reply_rate")
     async def cmd_group_reply_rate(self, event: AstrMessageEvent,
                                    group_id: str = None, rate: str = None):
         yield event.plain_result(await dududa_commands.cmd_group_reply_rate_impl(
             self, event, group_id, rate))
-
     @filter.command("dududa_meme_rate")
     async def cmd_group_meme_rate(self, event: AstrMessageEvent,
                                   group_id: str = None, rate: str = None):
         yield event.plain_result(await dududa_commands.cmd_group_meme_rate_impl(
             self, event, group_id, rate))
-
     @filter.command("dududa_interrupt_cost")
     async def cmd_group_interrupt_cost(self, event: AstrMessageEvent,
                                        group_id: str = None, cost: str = None):
         yield event.plain_result(await dududa_commands.cmd_group_interrupt_cost_impl(
             self, event, group_id, cost))
-
     @filter.command("dududa_ambient")
     async def cmd_group_ambient(self, event: AstrMessageEvent,
                                 action: str = "status"):
-        """群管理员控制忙碌群聊中的问题补位，默认关闭。"""
         yield event.plain_result(await dududa_commands.cmd_group_ambient_impl(
             self, event, action))
-
     @filter.command("dududa_meme")
     async def cmd_group_meme(self, event: AstrMessageEvent):
-        """Review and maintain this group's custom meme dictionary."""
         yield event.plain_result(await dududa_commands.cmd_group_meme_impl(
             self, event))
-
     @filter.command("dududa_style")
     async def cmd_style(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_style_impl(self, event))
-
     @filter.command("dududa_forget")
     async def cmd_forget(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_forget_impl(self, event))
-
     @filter.command("dududa_help", alias={"嘟嘟哒帮助"})
     async def cmd_help(self, event: AstrMessageEvent):
-        """查看当前真正可用的能力和常用命令。"""
         yield event.plain_result(await dududa_commands.cmd_help_impl(self))
-
     @filter.command("dududa_feedback", alias={"问题反馈"})
     async def cmd_feedback(self, event: AstrMessageEvent, summary: str = None):
         raw = str(getattr(event, "message_str", "") or "").strip()
         summary = raw.partition(" ")[2].strip() or summary or ""
         yield event.plain_result(await dududa_commands.cmd_feedback_impl(self, summary))
-
     @filter.command("dududa_cancel", alias={"取消任务"})
     async def cmd_cancel(self, event: AstrMessageEvent):
-        """取消当前会话正在执行的慢任务。"""
         yield event.plain_result(await dududa_commands.cmd_cancel_impl(self, event))
-
     @filter.command("dududa_memory", alias={"我的记忆"})
     async def cmd_memory(self, event: AstrMessageEvent,
                          action: str = "status", record_id: str = None):
-        """查看、删除或暂停自己的记忆。"""
         yield event.plain_result(await dududa_commands.cmd_memory_impl(
             self, event, action, record_id))
-
     @filter.command("dududa_subscribe", alias={"订阅管理"})
     async def cmd_subscribe(self, event: AstrMessageEvent,
                             action: str = "list", topic: str = "更新"):
-        """显式订阅、退订以及设置免打扰时间。"""
         yield event.plain_result(await dududa_commands.cmd_subscribe_impl(
             self, event, action, topic))
-
     @filter.command("dududa_broadcast")
     async def cmd_broadcast(self, event: AstrMessageEvent,
                             topic: str = None, message: str = None):
-        """管理员生成订阅推送预览，不会立即发送。"""
         raw = str(getattr(event, "message_str", "") or "").strip()
         parts = raw.split(maxsplit=2)
         if len(parts) >= 3:
             topic, message = parts[1], parts[2]
         yield event.plain_result(await dududa_commands.cmd_broadcast_prepare_impl(
             self, event, topic, message))
-
     @filter.command("dududa_broadcast_confirm")
     async def cmd_broadcast_confirm(self, event: AstrMessageEvent,
                                     broadcast_id: str = None):
-        """管理员确认向符合条件的显式订阅者发送预览。"""
         yield event.plain_result(await dududa_commands.cmd_broadcast_confirm_impl(
             self, event, broadcast_id))
 
