@@ -551,4 +551,9 @@ class Main(star.Star):
             self, event, broadcast_id))
 
     async def terminate(self):
+        topic_tasks = (list(getattr(self, "_group_topic_summary_tasks", {}).values())
+                       + list(getattr(self, "_group_topic_refresh_tasks", {}).values()))
+        for task in topic_tasks:
+            if not task.done():
+                task.cancel()
         self.ux_tasks.cancel_all()
