@@ -64,13 +64,8 @@ from dududa.application.user_experience import (
 )
 from dududa.application.dududa_log import get_logger as _get_logger
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
-if _PLUGIN_DIR not in sys.path:
-    sys.path.insert(0, _PLUGIN_DIR)
-# Public course snapshots are durable plugin data, not repository state.
-os.environ.setdefault(
-    "DUDUDA_CATALOG_CACHE_DIR",
-    os.path.join(_PLUGIN_DIR, "data", "ustc_catalog"),
-)
+if _PLUGIN_DIR not in sys.path: sys.path.insert(0, _PLUGIN_DIR)
+os.environ.setdefault("DUDUDA_CATALOG_CACHE_DIR", os.path.join(_PLUGIN_DIR, "data", "ustc_catalog"))
 from _router import router as _model_router
 router = _model_router
 
