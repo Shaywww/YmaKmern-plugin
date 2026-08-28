@@ -1,4 +1,4 @@
-# Dududa 2.0 AstrBot 插件（薄壳）
+# YmaKmern AstrBot 插件（薄壳）
 
 ## 仓库定位
 
@@ -9,7 +9,7 @@
 - `metadata.yaml`：插件元信息（AstrBot 读取）
 - `data/`：运行时数据（画像/记忆/配置），不提交
 
-**核心运行时在 [dududa20-prototype](https://github.com/Shaywww/dududa20-prototype)**（Agent Runtime：领域模型 / 13 阶段 Pipeline / MCP 工具 / LLM 路由 / 记忆画像 / 控制台 / 运维）。本插件通过固定路径加载其代码，两个仓库配合部署：
+**核心运行时在 [YmaKmern-prototype](https://github.com/Shaywww/YmaKmern-prototype)**（Agent Runtime：领域模型 / 13 阶段 Pipeline / MCP 工具 / LLM 路由 / 记忆画像 / 控制台 / 运维）。本插件通过固定路径加载其代码，两个仓库配合部署：
 
 - 改核心逻辑（感知/决策/规划/工具/记忆/路由）→ 提交 prototype 仓库
 - 改插件装配、AstrBot 适配、管理命令 → 提交本仓库
@@ -17,6 +17,13 @@
 ## 更新日志
 
 > 按主题分组，最新改动在前。
+
+### 0.7.0 YmaKmern 更名与人格调整
+
+- 插件名、帮助文案、自我介绍与 GitHub 仓库统一更名为 YmaKmern
+- 保留原有温暖活泼、纯文本颜文字的风格，默认增加克制的傲娇与轻微嘴欠
+- 严肃、求助与高风险话题自动收起嘴欠，不影响事实准确性和安全边界
+- 新命令以 `/ymakmern_*` 为主，原 `/dududa_*` 全部保留为兼容别名；数据、环境变量和服务路径不变
 
 ### 0.6.0 USTC 公开开课缓存
 
@@ -70,14 +77,14 @@
 - 自然参与群独立维护最近 7 条真人消息，5 分钟无消息自动清空；上下文只驻留内存，QQ 号替换成临时成员别名
 - 基础梗、热梗和群自定义梗支持拼音近似初筛，命中后仍由 DeepSeek 判断场景、是否在玩梗及是否适合插话；认真讨论、低置信度和异常输出全部保持沉默
 - 被点名图片可结合最近群聊理解；未点名图片只在闲聊上下文或至少两人连续发表情包时进入 GPT 视觉摘要，再交给 DeepSeek 决定是否接话
-- 新增 `/dududa_meme list|candidates|add|remove` 管理命令；陌生短语候选只保存脱敏短语与次数，必须由管理员审核后才能进入本群梗库
+- 新增 `/ymakmern_meme list|candidates|add|remove` 管理命令；陌生短语候选只保存脱敏短语与次数，必须由管理员审核后才能进入本群梗库
 - 接梗、场景回应与其他主动发言继续共用每群 30 分钟冷却和每天 2 次限额
 
 ### 0.3.4 低频话题插话
 
 - 自然参与开启后，可在外卖、下班、奶茶、摸鱼和电影等少量人设话题中低概率接一句
 - 只在近期至少 4 条消息、至少 2 人参与时进入概率采样，默认触发概率 35%
-- 话题插话不调用模型，使用多套嘟嘟哒短句；继续与其他主动回应共用冷却和每日限额
+- 话题插话不调用模型，使用多套 YmaKmern 短句；继续与其他主动回应共用冷却和每日限额
 
 ### 0.3.3 群聊场景回应
 
@@ -94,7 +101,7 @@
 
 ### 0.3.1 可控群聊问题补位
 
-- 新增 `/dududa_ambient on|off|status`，仅当前群的群主、群管理员或机器人管理员可以开关，默认关闭
+- 新增 `/ymakmern_ambient on|off|status`，仅当前群的群主、群管理员或机器人管理员可以开关，默认关闭
 - 开启后只在 4 分钟内至少 15 条真人消息、至少 3 人参与且最新消息为明确问题时补位，不随机 `@` 人
 - 每群冷却 30 分钟、每天最多 2 次、只回复一轮；忽略命令、未点名媒体、撤回提示和已配置的机器人发送者
 - 补位路径不发送“正在整理答案”进度消息，减少活跃群里的额外打扰
@@ -110,20 +117,20 @@
 
 - 未点名的普通群消息在创建进度任务、Trace 和模型调用前结束，避免无关群聊占用任务并向旁观者返回“上一条仍在处理”
 - 未点名图片仍按群和发送者轻量暂存，供 QQ 拆条后的同一发送者点名消息配对；已配置的机器人发送者不会污染暂存区
-- 新增静态机器人忽略名单与重复/爆发/群回声熔断；动态熔断期间，真人精确 `@` 嘟嘟哒仍可正常使用
+- 新增静态机器人忽略名单与重复/爆发/群回声熔断；动态熔断期间，真人精确 `@` YmaKmern 仍可正常使用
 - 纯 `@` 拆条窗口按平台、群、发送者和 Bot 隔离且只消费一次，不会把甲的点名错误继承给乙
 
 生产环境可用 `DUDUDA_GROUP_IGNORED_SENDER_IDS` 配置逗号分隔的外部机器人 QQ 号；动态参数可按需通过 `DUDUDA_LOOP_REPEAT_WINDOW`、`DUDUDA_LOOP_REPEAT_THRESHOLD`、`DUDUDA_LOOP_BURST_WINDOW`、`DUDUDA_LOOP_BURST_THRESHOLD`、`DUDUDA_LOOP_SENDER_TTL`、`DUDUDA_LOOP_GROUP_TTL` 和 `DUDUDA_LOOP_MAX_KEYS` 调整。
 
 ### 0.2.8 单一回复出口
 
-- Dududa 使用独立模型路由时显式关闭 AstrBot 默认 Agent 兜底，避免同一 QQ 账号突然切换成通用助手人格
+- YmaKmern 使用独立模型路由时显式关闭 AstrBot 默认 Agent 兜底，避免同一 QQ 账号突然切换成通用助手人格
 - 群聊中的未知 `/...` 命令保持静默，不抢其他机器人的命令，也不再生成带 Markdown 标题和彩色 Emoji 的长回复
-- Dududa 被关闭或按群策略保持静默时也不会退回 AstrBot 通用人格
+- YmaKmern 被关闭或按群策略保持静默时也不会退回 AstrBot 通用人格
 
 ### 0.2.7 影子进化
 
-- 新增 `/dududa_feedback <问题说明>`：用户可主动提交脱敏改进反馈，不保存身份、会话或原始附件
+- 新增 `/ymakmern_feedback <问题说明>`：用户可主动提交脱敏改进反馈，不保存身份、会话或原始附件
 - 同类问题累计到门槛后只生成待人工审核的 Skill 候选，不会自动修改、启用或部署机器人
 - 控制台可查看经验与候选、扫描失败轨迹并做实现审批，审批与线上发布严格分离
 
@@ -159,29 +166,29 @@
 
 ### 0.2.1 回答可靠性
 
-- 取消在用户第一次正常提问前自动插入整段使用说明；需要帮助时由用户主动发送 `/dududa_help`
+- 取消在用户第一次正常提问前自动插入整段使用说明；需要帮助时由用户主动发送 `/ymakmern_help`
 - 慢任务进度提示阈值从 3 秒调整为 5 秒，减少普通问答中的打扰
 - 配合核心运行时修复联网搜索空参数、工具失败后继续猜测及内部占位符泄漏
 
 ### 0.2.0 用户体验
 
-- 慢任务 3 秒后主动提示当前阶段，支持 `/dududa_cancel` 取消；同一用户/会话只运行一个任务
+- 慢任务 3 秒后主动提示当前阶段，支持 `/ymakmern_cancel` 取消；同一用户/会话只运行一个任务
 - 首次主动私聊附带一次极简引导，不在加好友时推送，也不在群聊打扰
-- `/dududa_memory` 支持查看本人记忆、删除单条/全部、暂停写入和临时无记忆对话
-- `/dududa_subscribe` 提供显式订阅、退订和免打扰；默认不订阅、每日最多 1 条
+- `/ymakmern_memory` 支持查看本人记忆、删除单条/全部、暂停写入和临时无记忆对话
+- `/ymakmern_subscribe` 提供显式订阅、退订和免打扰；默认不订阅、每日最多 1 条
 - 管理员推送必须先预览再确认，并在发送前再次检查退订、免打扰和频率限制
-- `/dududa_help` 根据实际 Provider 健康状态生成帮助；模型双线路失败返回可检索错误编号
+- `/ymakmern_help` 根据实际 Provider 健康状态生成帮助；模型双线路失败返回可检索错误编号
 
 常用命令：
 
 ```text
-/dududa_help
-/dududa_cancel
-/dududa_feedback <问题说明>
-/dududa_memory list|active|paused|temporary|delete <ID>|clear
-/dududa_subscribe add 更新|remove 更新|quiet 22:30-08:00
-/dududa_ambient on|off|status
-/dududa_meme list|candidates|add 梗词 | 含义 | 别名1,别名2|remove 梗词
+/ymakmern_help
+/ymakmern_cancel
+/ymakmern_feedback <问题说明>
+/ymakmern_memory list|active|paused|temporary|delete <ID>|clear
+/ymakmern_subscribe add 更新|remove 更新|quiet 22:30-08:00
+/ymakmern_ambient on|off|status
+/ymakmern_meme list|candidates|add 梗词 | 含义 | 别名1,别名2|remove 梗词
 ```
 
 ### 感知与规划
