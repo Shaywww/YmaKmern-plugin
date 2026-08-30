@@ -58,7 +58,7 @@ from dududa.application.dududa_prod import (
     _ProdDecisionEngine, _ProdCapProvider, _ProdOrchestrator,
 )
 from dududa.application.dududa_core import DududaCore, persona_to_oc
-from dududa.application import dududa_commands, dududa_handlers
+from dududa.application import dududa_commands, dududa_handlers, dududa_memory
 from dududa.application.user_experience import (
     UserExperienceStore, ConversationTaskRegistry,
 )
@@ -98,24 +98,21 @@ provider = OpenAIProvider(
     base_urls={FALLBACK_MODEL: FALLBACK_BASE, VISION_MODEL: VISION_BASE},
     api_keys={FALLBACK_MODEL: FALLBACK_KEY, VISION_MODEL: VISION_KEY},
 )
-
-def _role_cfg(role, effort, tokens, temp=0.7, timeout=30.0, model=None):
-    """单角色生产配置：主模型 = MODEL（可覆盖），降级 = FALLBACK_MODEL（文档 2.5.7）。"""
+def _role_cfg(role, effort, tokens, temp=0.7, timeout=30.0, model=None, allow_sensitive=False, use_fallback=True):
     return ModelConfig(
         role=role, model_id=model or MODEL, reasoning_effort=effort,
         max_tokens=tokens, temperature=temp, timeout_seconds=timeout,
-        retry_count=1, allow_sensitive=False, route_hint_allowed=False,
-        fallback_model_id=FALLBACK_MODEL,
+        retry_count=1, allow_sensitive=allow_sensitive, route_hint_allowed=False,
+        fallback_model_id=(FALLBACK_MODEL if use_fallback else None),
     )
-
-
 router_config = RouterConfig(roles={
     ModelRole.PERCEPTION: _role_cfg(ModelRole.PERCEPTION, "low", 1024),
     ModelRole.SOCIAL_DECISION: _role_cfg(ModelRole.SOCIAL_DECISION, "medium", 512),
     ModelRole.TOOL_PLANNING: _role_cfg(ModelRole.TOOL_PLANNING, "high", 2048),
     ModelRole.DIRECT_CHAT: _role_cfg(ModelRole.DIRECT_CHAT, "medium", 2048),
     ModelRole.RESPONSE_COMPOSITION: _role_cfg(ModelRole.RESPONSE_COMPOSITION, "medium", 2048),
-    ModelRole.MEMORY_SUMMARY: _role_cfg(ModelRole.MEMORY_SUMMARY, "low", 1024),
+    ModelRole.MEMORY_SUMMARY: _role_cfg(
+        ModelRole.MEMORY_SUMMARY, "low", 1024, allow_sensitive=True, use_fallback=False),
     ModelRole.IMAGE_UNDERSTANDING: _role_cfg(ModelRole.IMAGE_UNDERSTANDING,
                                             "medium", 1024, temp=0.3, timeout=90.0,
                                             model=VISION_MODEL),
@@ -147,11 +144,9 @@ OWNER_IDS = {x.strip() for x in os.environ.get("DUDUDA_OWNER_IDS", "").split(","
 ADMIN_IDS = {x.strip() for x in os.environ.get("DUDUDA_ADMIN_IDS", "").split(",") if x.strip()}
 TRUSTED_IDS = {x.strip() for x in os.environ.get("DUDUDA_TRUSTED_IDS", "").split(",") if x.strip()}
 MUTED_IDS = {x.strip() for x in os.environ.get("DUDUDA_MUTED_IDS", "").split(",") if x.strip()}
-
 # 应用用例层配置：动态代理（每次读取当前模块常量，monkeypatch 兼容）
 class _LiveConfig:
     """读取 main 模块当前常量；测试 monkeypatch main.XXX 后立即生效。"""
-
     def __getitem__(self, key: str):
         return {
             "MODEL": MODEL,
@@ -183,6 +178,7 @@ class Main(star.Star):
             budget_file_default=os.path.join(
                 _PLUGIN_DATA_DIR, "data", "budget.json"))
         self.memory = JSONMemoryRepository(path=MEMORY_FILE)
+        self.memory_consolidator = dududa_memory.create_consolidator(self.memory, _PLUGIN_DATA_DIR)
         self.cap_registry = CapabilityRegistry()
         self.profile_store = ProfileStore(path=os.environ.get(
             "DUDUDA_PROFILE_FILE",
@@ -331,6 +327,10 @@ class Main(star.Star):
     def _read_memory(self, event, limit=8, budget=2500, include_episodic=False):
         return self._core._read_memory(
             event, limit=limit, budget=budget, include_episodic=include_episodic)
+
+    async def _maybe_consolidate_memory(self, event, run_id="", trace_id=""):
+        return await dududa_memory.maybe_consolidate_memory(
+            self, event, run_id=run_id, trace_id=trace_id)
 
     def _persona_to_oc(self, template):
         return self._core._persona_to_oc(template)
