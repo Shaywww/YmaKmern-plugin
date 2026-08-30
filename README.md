@@ -14,6 +14,13 @@
 - 改核心逻辑（感知/决策/规划/工具/记忆/路由）→ 提交 prototype 仓库
 - 改插件装配、AstrBot 适配、管理命令 → 提交本仓库
 
+## 图片数据流
+
+- 图片、GIF 抽帧和视频关键帧会以 Base64 发往 `OPENAI_BASE_URL` 配置的视觉端点；截图可能含账号、聊天记录等敏感内容。
+- 自定义/中转端点默认禁用。管理员需设置 `DUDUDA_VISION_ALLOW_THIRD_PARTY=1`，并在目标群执行 `/ymakmern_vision on`；两个开关任一关闭都不会上传。
+- 视觉 Trace 始终标记为 `sensitive`。可用 `DUDUDA_VISION_TRUSTED_HOSTS` 配置经审核的官方端点，默认仅信任 `api.openai.com`。
+- 外部端点的日志与保留周期由提供方决定，启用前应审查其隐私政策。
+
 ## 更新日志
 
 > 按主题分组，最新改动在前。

@@ -338,9 +338,7 @@ class Main(star.Star):
     def _render_response(self, raw_text: str, persona_tone: str = "", anchors=()) -> str:
         return self._core._render_response(raw_text, persona_tone=persona_tone, anchors=anchors)
 
-    def _persona_tone(self):
-        return self._core._persona_tone()
-
+    def _persona_tone(self): return self._core._persona_tone()
     async def _call_llm(self, system, user_msg, max_tokens=1024, temperature=0.5,
                         run_id="", trace_id="", skip_render=False):
         return await self._core._call_llm(
@@ -375,14 +373,13 @@ class Main(star.Star):
             return None
 
     async def _call_vision(self, system, user_text, image_b64, mime,
-                           run_id="", trace_id="", skip_render=False):
+                           run_id="", trace_id="", skip_render=False, **privacy):
         return await self._core._call_vision(
             system, user_text, image_b64, mime, run_id=run_id,
-            trace_id=trace_id, skip_render=skip_render)
+            trace_id=trace_id, skip_render=skip_render, **privacy)
 
     @staticmethod
-    def _deny_hint(res, conf) -> str:
-        return dududa_commands._deny_hint(res, conf)
+    def _deny_hint(res, conf) -> str: return dududa_commands._deny_hint(res, conf)
 
 
     def _register_builtin_caps(self):
@@ -504,6 +501,9 @@ class Main(star.Star):
                                 action: str = "status"):
         yield event.plain_result(await dududa_commands.cmd_group_ambient_impl(
             self, event, action))
+    @filter.command("ymakmern_vision", alias={"dududa_vision"})
+    async def cmd_group_vision(self, event: AstrMessageEvent, action: str = "status"):
+        yield event.plain_result(await dududa_commands.cmd_group_vision_impl(self, event, action))
     @filter.command("ymakmern_meme", alias={"dududa_meme"})
     async def cmd_group_meme(self, event: AstrMessageEvent):
         yield event.plain_result(await dududa_commands.cmd_group_meme_impl(
