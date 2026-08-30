@@ -9,10 +9,12 @@
 - `metadata.yaml`：插件元信息（AstrBot 读取）
 - `data/`：运行时数据（画像/记忆/配置），不提交
 
-**核心运行时在 [YmaKmern-prototype](https://github.com/Shaywww/YmaKmern-prototype)**（Agent Runtime：领域模型 / 13 阶段 Pipeline / MCP 工具 / LLM 路由 / 记忆画像 / 控制台 / 运维）。本插件通过固定路径加载其代码，两个仓库配合部署：
+**核心运行时在 [YmaKmern-prototype](https://github.com/Shaywww/YmaKmern-prototype)**（Agent Runtime：领域模型 / 13 阶段 Pipeline / MCP 工具 / LLM 路由 / 记忆画像 / 控制台 / 运维）。本插件通过 `DUDUDA_AGENT_SRC` 指向核心包的 `src` 目录，不再绑定某台服务器的绝对路径；两个仓库配合部署：
 
 - 改核心逻辑（感知/决策/规划/工具/记忆/路由）→ 提交 prototype 仓库
 - 改插件装配、AstrBot 适配、管理命令 → 提交本仓库
+
+生产部署必须设置 `DUDUDA_AGENT_SRC=/path/to/YmaKmern-prototype/packages/dududa-agent/src`；本地开发也可以直接把 prototype 以 editable 模式安装到当前 Python 环境。
 
 ## 图片数据流
 

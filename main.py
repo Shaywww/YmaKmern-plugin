@@ -10,7 +10,7 @@
 """
 import sys, os, re, time, logging, httpx, json as _json, base64 as _b64
 from io import BytesIO
-sys.path.insert(0, "/opt/dududa20-prototype/packages/dududa-agent/src")
+_AGENT_SRC = os.environ.get("DUDUDA_AGENT_SRC", "").strip(); _AGENT_SRC and _AGENT_SRC not in sys.path and sys.path.insert(0, _AGENT_SRC)
 from astrbot.api import star
 from astrbot.api.event import filter, AstrMessageEvent, MessageChain
 from astrbot.api.all import *
