@@ -58,7 +58,9 @@ from dududa.application.dududa_prod import (
     _ProdDecisionEngine, _ProdCapProvider, _ProdOrchestrator,
 )
 from dududa.application.dududa_core import DududaCore, persona_to_oc
-from dududa.application import dududa_commands, dududa_handlers, dududa_memory
+from dududa.application import (
+    dududa_commands, dududa_handlers, dududa_memory, persona_shadow,
+)
 from dududa.application.user_experience import (
     UserExperienceStore, ConversationTaskRegistry,
 )
@@ -179,6 +181,9 @@ class Main(star.Star):
                 _PLUGIN_DATA_DIR, "data", "budget.json"))
         self.memory = JSONMemoryRepository(path=MEMORY_FILE)
         self.memory_consolidator = dududa_memory.create_consolidator(self.memory, _PLUGIN_DATA_DIR)
+        self.persona_shadow = persona_shadow.create_persona_shadow(
+            _PLUGIN_DATA_DIR)
+        self._persona_shadow_tasks: set = set()
         self.cap_registry = CapabilityRegistry()
         self.profile_store = ProfileStore(path=os.environ.get(
             "DUDUDA_PROFILE_FILE",

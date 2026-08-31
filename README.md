@@ -23,6 +23,13 @@
 - 视觉 Trace 始终标记为 `sensitive`。可用 `DUDUDA_VISION_TRUSTED_HOSTS` 配置经审核的官方端点，默认仅信任 `api.openai.com`。
 - 外部端点的日志与保留周期由提供方决定，启用前应审查其隐私政策。
 
+## 人格质量影子评测
+
+- 机器人成功发送回复后，默认在后台抽样 5%，每天最多 12 条；不会延迟或改写用户已经收到的回复。
+- 待评文本只走官方 DeepSeek 的敏感数据允许路由，不使用 GPT 中转或第三方备用线路。
+- 本地只保存数值分数、违规标签和脱敏会话哈希；不保存用户原话、回复正文、QQ 号、群号或评语。
+- `DUDUDA_PERSONA_SHADOW=0` 可关闭；采样率和每日上限分别由 `DUDUDA_PERSONA_SHADOW_RATE`、`DUDUDA_PERSONA_SHADOW_DAILY_LIMIT` 控制。
+
 ## 更新日志
 
 > 按主题分组，最新改动在前。
