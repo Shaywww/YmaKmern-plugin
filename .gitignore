@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 *.bak*
 memory.json
+memory.json.conflicts.json
 main.py.final
 main.py.stable
 main.py.stable.v3
