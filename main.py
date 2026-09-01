@@ -63,16 +63,12 @@ from dududa.application.user_experience import (
     UserExperienceStore, ConversationTaskRegistry,
 )
 from dududa.application.dududa_log import get_logger as _get_logger
-try:
-    from ._meme_manager_adapter import MemeManagerAdapter
-except ImportError:  # direct-file loading in repository tests
-    from _meme_manager_adapter import MemeManagerAdapter
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path: sys.path.insert(0, _PLUGIN_DIR)
 os.environ.setdefault("DUDUDA_CATALOG_CACHE_DIR", os.path.join(_PLUGIN_DIR, "data", "ustc_catalog"))
+from _meme_manager_adapter import MemeManagerAdapter
 from _router import router as _model_router
 router = _model_router
-
 logger = _get_logger("dududa20")
 
 API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
@@ -437,11 +433,7 @@ class Main(star.Star):
             await dududa_handlers.complete_delivery_after_send(self, event)
         except Exception as e:
             logger.warning("after_message_sent delivery ack failed: %s", e)
-        try:
-            await self.meme_manager_adapter.flush_after_text(event)
-        except Exception as e:
-            logger.warning("meme_manager post-send failed: %s", e)
-
+        await self.meme_manager_adapter.flush_after_text(event)
     async def _handle_media(self, event, url, name, is_image):
         return await dududa_handlers.handle_media(self, event, url, name, is_image)
 
