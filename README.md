@@ -33,8 +33,27 @@
 ## 响应策略影子追踪
 
 - 主对话、管理命令、进度提示和显式订阅发送都会交给 prototype 的统一响应策略影子解析器。
-- 当前只记录来源、版本、信号证据、风格上限和契约违规，不改写用户收到的文本，也不落盘用户原话或回复正文。
+- `DUDUDA_RESPONSE_POLICY_LIVE=0` 仅影子记录，`1` 灰度接管文字/引用生成，`2` 接管全部用户可见生成；旧 Prompt 仍可由 `0` 一键回滚。
+- 追踪只记录来源、版本、信号证据、风格上限和契约违规，不落盘用户原话或回复正文。
 - `DUDUDA_RESPONSE_POLICY_SHADOW=0` 可关闭该追踪；内部视觉摘要、感知和工具规划不使用对话人格 Prompt。
+
+## Meme Manager 受控桥接
+
+安装 `astrbot_plugin_meme_manager` 后，YmaKmern 可以通过其公开兼容接口
+在文本发送完成后附带一张审核过的表情包。桥接默认关闭，不允许该插件
+修改 YmaKmern 的 Persona Kernel。
+
+```bash
+DUDUDA_MEME_MANAGER=1
+DUDUDA_MEME_MANAGER_GROUPS=1059231626,481757927
+DUDUDA_MEME_MANAGER_RATE=10
+DUDUDA_MEME_MANAGER_COOLDOWN=600
+```
+
+- 仅白名单群生效，私聊与未列出的群保持关闭；
+- 工具、命令、系统错误和高风险场景不发表情包；
+- 每轮最多一张，抽样对同一消息稳定，冷却按群独立计算；
+- 自动收集仍由 Meme Manager 自己控制，建议默认关闭并人工审核素材。
 
 ## 更新日志
 

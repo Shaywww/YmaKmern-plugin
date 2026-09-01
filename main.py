@@ -63,6 +63,7 @@ from dududa.application.user_experience import (
     UserExperienceStore, ConversationTaskRegistry,
 )
 from dududa.application.dududa_log import get_logger as _get_logger
+from _meme_manager_adapter import MemeManagerAdapter
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path: sys.path.insert(0, _PLUGIN_DIR)
 os.environ.setdefault("DUDUDA_CATALOG_CACHE_DIR", os.path.join(_PLUGIN_DIR, "data", "ustc_catalog"))
@@ -193,6 +194,7 @@ class Main(star.Star):
         self.style_store = UserStyleStore(path=STYLE_FILE)
         self.ux_store = UserExperienceStore(path=UX_FILE)
         self.ux_tasks = ConversationTaskRegistry()
+        self.meme_manager_adapter = MemeManagerAdapter(context)
         self.progress_delay = float(os.environ.get("DUDUDA_PROGRESS_DELAY", "5"))
         self._pending_broadcasts = {}
         self._perception_model_enabled = PERCEPTION_MODEL_ENABLED
@@ -423,7 +425,7 @@ class Main(star.Star):
     async def on_message(self, event: AstrMessageEvent):
         reply = await dududa_handlers.run_message_flow(self, event)
         if reply:
-            yield event.plain_result(reply)
+            yield await self.meme_manager_adapter.prepare_result(event, reply)
 
     @filter.after_message_sent()
     async def _after_message_sent(self, event: AstrMessageEvent):
@@ -432,6 +434,10 @@ class Main(star.Star):
             await dududa_handlers.complete_delivery_after_send(self, event)
         except Exception as e:
             logger.warning("after_message_sent delivery ack failed: %s", e)
+        try:
+            await self.meme_manager_adapter.flush_after_text(event)
+        except Exception as e:
+            logger.warning("meme_manager post-send failed: %s", e)
 
     async def _handle_media(self, event, url, name, is_image):
         return await dududa_handlers.handle_media(self, event, url, name, is_image)
