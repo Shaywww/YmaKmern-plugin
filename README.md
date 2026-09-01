@@ -30,6 +30,12 @@
 - 本地只保存数值分数、违规标签和脱敏会话哈希；不保存用户原话、回复正文、QQ 号、群号或评语。
 - `DUDUDA_PERSONA_SHADOW=0` 可关闭；采样率和每日上限分别由 `DUDUDA_PERSONA_SHADOW_RATE`、`DUDUDA_PERSONA_SHADOW_DAILY_LIMIT` 控制。
 
+## 响应策略影子追踪
+
+- 主对话、管理命令、进度提示和显式订阅发送都会交给 prototype 的统一响应策略影子解析器。
+- 当前只记录来源、版本、信号证据、风格上限和契约违规，不改写用户收到的文本，也不落盘用户原话或回复正文。
+- `DUDUDA_RESPONSE_POLICY_SHADOW=0` 可关闭该追踪；内部视觉摘要、感知和工具规划不使用对话人格 Prompt。
+
 ## 更新日志
 
 > 按主题分组，最新改动在前。
