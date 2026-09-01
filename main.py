@@ -58,11 +58,7 @@ from dududa.application.dududa_prod import (
     _ProdDecisionEngine, _ProdCapProvider, _ProdOrchestrator,
 )
 from dududa.application.dududa_core import DududaCore, persona_to_oc
-from dududa.application import (
-    dududa_commands, dududa_handlers, dududa_memory, persona_shadow,
-    response_policy_shadow,
-)
-from dududa.core.response_policy import ResponseOrigin
+from dududa.application import dududa_commands, dududa_handlers, dududa_memory, persona_shadow, response_policy_shadow
 from dududa.application.user_experience import (
     UserExperienceStore, ConversationTaskRegistry,
 )
@@ -452,98 +448,91 @@ class Main(star.Star):
 
     async def _send_subscription_message(self, origin: str, text: str):
         """Send only to a stored origin belonging to an explicit subscriber."""
-        response_policy_shadow.trace_proactive_response_shadow(
-            self, text, origin=ResponseOrigin.SUBSCRIPTION)
+        response_policy_shadow.trace_subscription_response_shadow(self, text)
         await self.context.send_message(origin, MessageChain().message(text))
-
-    def _command_result(self, event: AstrMessageEvent, text: str):
-        """Wrap deterministic command output in the shared policy shadow."""
-        response_policy_shadow.trace_adapter_response_shadow(
-            self, event, text, origin=ResponseOrigin.COMMAND)
-        return event.plain_result(text)
 
     @filter.command("ymakmern", alias={"dududa"})
     async def cmd_status(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_status_impl(self))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_status_impl(self))
     @filter.command("ymakmern_mcp", alias={"dududa_mcp"})
     async def cmd_mcp(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_mcp_impl(self))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_mcp_impl(self))
     @filter.command("ymakmern_health", alias={"dududa_health"})
     async def cmd_health(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_health_impl(self))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_health_impl(self))
     @filter.command("ymakmern_persona", alias={"dududa_persona"})
     async def cmd_persona(self, event: AstrMessageEvent, target: str = None):
-        yield self._command_result(event, await dududa_commands.cmd_persona_impl(self, event, target))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_persona_impl(self, event, target))
     @filter.command("ymakmern_confirm", alias={"dududa_confirm"})
     async def cmd_confirm(self, event: AstrMessageEvent, confirmation_id: str = None):
-        yield self._command_result(event, await dududa_commands.cmd_confirm_impl(self, event, confirmation_id))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_confirm_impl(self, event, confirmation_id))
     @filter.command("ymakmern_off", alias={"dududa_off"})
     async def cmd_off(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_off_impl(self, event))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_off_impl(self, event))
     @filter.command("ymakmern_on", alias={"dududa_on"})
     async def cmd_on(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_on_impl(self, event))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_on_impl(self, event))
     @filter.command("ymakmern_group", alias={"dududa_group"})
     async def cmd_group(self, event: AstrMessageEvent, target: str = None):
-        yield self._command_result(event, await dududa_commands.cmd_group_impl(self, event, target))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_group_impl(self, event, target))
     @filter.command("ymakmern_mode", alias={"dududa_mode"})
     async def cmd_group_mode(self, event: AstrMessageEvent,
                              group_id: str = None, mode: str = None):
-        yield self._command_result(event, await dududa_commands.cmd_group_mode_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_group_mode_impl(
             self, event, group_id, mode))
     @filter.command("ymakmern_reply_rate", alias={"dududa_reply_rate"})
     async def cmd_group_reply_rate(self, event: AstrMessageEvent,
                                    group_id: str = None, rate: str = None):
-        yield self._command_result(event, await dududa_commands.cmd_group_reply_rate_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_group_reply_rate_impl(
             self, event, group_id, rate))
     @filter.command("ymakmern_meme_rate", alias={"dududa_meme_rate"})
     async def cmd_group_meme_rate(self, event: AstrMessageEvent,
                                   group_id: str = None, rate: str = None):
-        yield self._command_result(event, await dududa_commands.cmd_group_meme_rate_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_group_meme_rate_impl(
             self, event, group_id, rate))
     @filter.command("ymakmern_interrupt_cost", alias={"dududa_interrupt_cost"})
     async def cmd_group_interrupt_cost(self, event: AstrMessageEvent,
                                        group_id: str = None, cost: str = None):
-        yield self._command_result(event, await dududa_commands.cmd_group_interrupt_cost_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_group_interrupt_cost_impl(
             self, event, group_id, cost))
     @filter.command("ymakmern_ambient", alias={"dududa_ambient"})
     async def cmd_group_ambient(self, event: AstrMessageEvent,
                                 action: str = "status"):
-        yield self._command_result(event, await dududa_commands.cmd_group_ambient_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_group_ambient_impl(
             self, event, action))
     @filter.command("ymakmern_vision", alias={"dududa_vision"})
     async def cmd_group_vision(self, event: AstrMessageEvent, action: str = "status"):
-        yield self._command_result(event, await dududa_commands.cmd_group_vision_impl(self, event, action))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_group_vision_impl(self, event, action))
     @filter.command("ymakmern_meme", alias={"dududa_meme"})
     async def cmd_group_meme(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_group_meme_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_group_meme_impl(
             self, event))
     @filter.command("ymakmern_style", alias={"dududa_style"})
     async def cmd_style(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_style_impl(self, event))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_style_impl(self, event))
     @filter.command("ymakmern_forget", alias={"dududa_forget"})
     async def cmd_forget(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_forget_impl(self, event))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_forget_impl(self, event))
     @filter.command("ymakmern_help", alias={"dududa_help", "YmaKmern帮助", "嘟嘟哒帮助"})
     async def cmd_help(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_help_impl(self))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_help_impl(self))
     @filter.command("ymakmern_feedback", alias={"dududa_feedback", "问题反馈"})
     async def cmd_feedback(self, event: AstrMessageEvent, summary: str = None):
         raw = str(getattr(event, "message_str", "") or "").strip()
         summary = raw.partition(" ")[2].strip() or summary or ""
-        yield self._command_result(event, await dududa_commands.cmd_feedback_impl(self, summary))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_feedback_impl(self, summary))
     @filter.command("ymakmern_cancel", alias={"dududa_cancel", "取消任务"})
     async def cmd_cancel(self, event: AstrMessageEvent):
-        yield self._command_result(event, await dududa_commands.cmd_cancel_impl(self, event))
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_cancel_impl(self, event))
     @filter.command("ymakmern_memory", alias={"dududa_memory", "我的记忆"})
     async def cmd_memory(self, event: AstrMessageEvent,
                          action: str = "status", record_id: str = None):
-        yield self._command_result(event, await dududa_commands.cmd_memory_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_memory_impl(
             self, event, action, record_id))
     @filter.command("ymakmern_subscribe", alias={"dududa_subscribe", "订阅管理"})
     async def cmd_subscribe(self, event: AstrMessageEvent,
                             action: str = "list", topic: str = "更新"):
-        yield self._command_result(event, await dududa_commands.cmd_subscribe_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_subscribe_impl(
             self, event, action, topic))
     @filter.command("ymakmern_broadcast", alias={"dududa_broadcast"})
     async def cmd_broadcast(self, event: AstrMessageEvent,
@@ -552,12 +541,12 @@ class Main(star.Star):
         parts = raw.split(maxsplit=2)
         if len(parts) >= 3:
             topic, message = parts[1], parts[2]
-        yield self._command_result(event, await dududa_commands.cmd_broadcast_prepare_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_broadcast_prepare_impl(
             self, event, topic, message))
     @filter.command("ymakmern_broadcast_confirm", alias={"dududa_broadcast_confirm"})
     async def cmd_broadcast_confirm(self, event: AstrMessageEvent,
                                     broadcast_id: str = None):
-        yield self._command_result(event, await dududa_commands.cmd_broadcast_confirm_impl(
+        yield response_policy_shadow.command_result_shadow(self, event, await dududa_commands.cmd_broadcast_confirm_impl(
             self, event, broadcast_id))
 
     async def terminate(self):
