@@ -63,7 +63,10 @@ from dududa.application.user_experience import (
     UserExperienceStore, ConversationTaskRegistry,
 )
 from dududa.application.dududa_log import get_logger as _get_logger
-from _meme_manager_adapter import MemeManagerAdapter
+try:
+    from ._meme_manager_adapter import MemeManagerAdapter
+except ImportError:  # direct-file loading in repository tests
+    from _meme_manager_adapter import MemeManagerAdapter
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path: sys.path.insert(0, _PLUGIN_DIR)
 os.environ.setdefault("DUDUDA_CATALOG_CACHE_DIR", os.path.join(_PLUGIN_DIR, "data", "ustc_catalog"))
