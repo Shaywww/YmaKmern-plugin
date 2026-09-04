@@ -242,6 +242,8 @@ DUDUDA_MEME_MANAGER_COOLDOWN=600
 ### 装配与接线
 
 - 接线用户画像 ProfileStore、群策略 GroupPolicyStore、确认存储 ConfirmationStore（文档 2.4.6 / 2.5.2 / 2.5.9）
+- 接线版本化 ExperimentRegistry；默认主动参与实验为 `SHADOW + rollout=0`，不会因安装或重启自动放量。生产环境应配置 `DUDUDA_EXPERIMENT_BUCKET_SALT`，并用 `DUDUDA_EXPERIMENT_FILE` 让 Bot 与 Control Plane 读取同一份原子状态
+- 实验全局/单群 kill 只关闭环境主动参与，不影响明确 @、命令和回复链
 - 接线媒体仓库 media_repo（图片暂存）与运行时限额 RuntimeLimits
 - 接线消息幂等注册表 + 两阶段投递回执（after_message_sent 钩子，文档 2.3.15-2.3.16）
 - 接线 hybrid OCRenderer（DUDUDA_HYBRID_RENDER）与风格存储 dududa_style 命令（文档 2.5.8）
