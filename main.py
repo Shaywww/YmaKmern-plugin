@@ -43,7 +43,6 @@ from dududa.core.group_ingress_guard import GroupIngressGuard
 from dududa.core.group_ambient import GroupAmbientTracker
 from dududa.core.group_context import GroupConversationTracker
 from dududa.core.meme_library import MemeLibrary
-from dududa.core.experiments import ExperimentRegistry, default_experiment_specs
 from dududa.core.style_store import UserStyleStore
 from dududa.core.structured_output import PERCEPTION_SYSTEM_PROMPT
 from dududa.mcp.registry import register_all_mcp_services
@@ -67,6 +66,7 @@ from dududa.application.dududa_log import get_logger as _get_logger
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path: sys.path.insert(0, _PLUGIN_DIR)
 os.environ.setdefault("DUDUDA_CATALOG_CACHE_DIR", os.path.join(_PLUGIN_DIR, "data", "ustc_catalog"))
+from _experiment_adapter import make_experiment_registry
 from _meme_manager_adapter import MemeManagerAdapter
 from _router import router as _model_router
 router = _model_router
@@ -136,13 +136,8 @@ GROUP_AMBIENT_FILE = os.environ.get(
 MEME_FILE = os.environ.get(
     "DUDUDA_MEME_FILE",
     os.path.join(_PLUGIN_DATA_DIR, "data", "meme_library.json"))
-STYLE_FILE = os.environ.get("DUDUDA_STYLE_FILE",
-                         os.path.join(_PLUGIN_DATA_DIR, "data", "styles.json"))
-UX_FILE = os.environ.get("DUDUDA_UX_FILE",
-                        os.path.join(_PLUGIN_DATA_DIR, "data", "user_experience.json"))
-EXPERIMENT_FILE = os.environ.get(
-    "DUDUDA_EXPERIMENT_FILE",
-    os.path.join(_PLUGIN_DATA_DIR, "data", "experiments.json"))
+STYLE_FILE = os.environ.get("DUDUDA_STYLE_FILE", os.path.join(_PLUGIN_DATA_DIR, "data", "styles.json"))
+UX_FILE = os.environ.get("DUDUDA_UX_FILE", os.path.join(_PLUGIN_DATA_DIR, "data", "user_experience.json"))
 PERCEPTION_MODEL_ENABLED = os.environ.get("DUDUDA_PERCEPTION_MODEL", "1") == "1"
 OWNER_IDS = {x.strip() for x in os.environ.get("DUDUDA_OWNER_IDS", "").split(",") if x.strip()}
 ADMIN_IDS = {x.strip() for x in os.environ.get("DUDUDA_ADMIN_IDS", "").split(",") if x.strip()}
@@ -189,11 +184,7 @@ class Main(star.Star):
             "DUDUDA_PROFILE_FILE",
             os.path.join(_PLUGIN_DATA_DIR, "data", "profiles.json")))
         self.group_policy = GroupPolicyStore(path=GROUP_POLICY_FILE)
-        self.experiment_registry = ExperimentRegistry(
-            path=EXPERIMENT_FILE,
-            bucket_salt=os.environ.get("DUDUDA_EXPERIMENT_BUCKET_SALT", ""),
-            defaults=default_experiment_specs(),
-        )
+        self.experiment_registry = make_experiment_registry(_PLUGIN_DATA_DIR)
         self.group_ingress_guard = GroupIngressGuard.from_env()
         self.group_ambient = GroupAmbientTracker(state_path=GROUP_AMBIENT_FILE)
         self.group_context = GroupConversationTracker(
