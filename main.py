@@ -424,6 +424,7 @@ class Main(star.Star):
     async def on_message(self, event: AstrMessageEvent):
         reply = await dududa_handlers.run_message_flow(self, event)
         if reply:
+            dududa_handlers.stage_group_reply_context(self, event, reply)
             yield await self.meme_manager_adapter.prepare_result(event, reply)
 
     @filter.after_message_sent()
@@ -433,6 +434,7 @@ class Main(star.Star):
             await dududa_handlers.complete_delivery_after_send(self, event)
         except Exception as e:
             logger.warning("after_message_sent delivery ack failed: %s", e)
+        dududa_handlers.commit_group_reply_context(self, event)
         await self.meme_manager_adapter.flush_after_text(event)
     async def _handle_media(self, event, url, name, is_image):
         return await dududa_handlers.handle_media(self, event, url, name, is_image)
