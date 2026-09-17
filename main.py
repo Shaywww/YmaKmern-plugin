@@ -407,15 +407,12 @@ class Main(star.Star):
         try:
             from dududa.mcp.access import mcp_access
             mcp_access.ensure_seed(owner_ids=tuple(sorted(OWNER_IDS)))
-            if os.environ.get("DUDUDA_MCP_CLIENT", "0") == "1":
-                from dududa.mcp.client import create_unified_provider_factory
-                factory = create_unified_provider_factory()
-                n = register_all_mcp_services(
-                    self.cap_registry, provider_factory=factory)
-                self.mcp_client = factory
-            else:
-                n = register_all_mcp_services(self.cap_registry)
-                self.mcp_client = None
+            # The external iCourse process was only used by the retired course
+            # lookup stack.  Keep the remaining campus capabilities on their
+            # local providers so the retired server cannot be started by an
+            # environment variable left behind on a deployment host.
+            n = register_all_mcp_services(self.cap_registry)
+            self.mcp_client = None
             logger.info("MCP capabilities registered: %d", n)
         except Exception as e:
             logger.warning("MCP registration failed: %s", e)
