@@ -73,15 +73,16 @@ router = _model_router
 logger = _get_logger("dududa20")
 
 API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
-MODEL   = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
+MODEL   = os.environ.get("DEEPSEEK_MODEL", "deepseek-flash")
+DEEPSEEK_BASE = os.environ.get(
+    "DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
 
-VISION_KEY   = os.environ.get("OPENAI_API_KEY", API_KEY)
-VISION_MODEL = os.environ.get("VISION_MODEL", "claude-haiku-4-5-20251001")
-VISION_BASE  = os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.ai/v1")
-
-FALLBACK_MODEL = os.environ.get("FALLBACK_MODEL", "gpt-5.5")
-FALLBACK_KEY   = os.environ.get("FALLBACK_KEY", VISION_KEY)
-FALLBACK_BASE  = os.environ.get("FALLBACK_BASE", VISION_BASE)
+# User-visible text and image understanding intentionally share one audited
+# DeepSeek endpoint and credential.  Do not silently route images or failures
+# through a GPT/Claude relay.
+VISION_KEY   = API_KEY
+VISION_MODEL = os.environ.get("VISION_MODEL", MODEL)
+VISION_BASE  = DEEPSEEK_BASE
 
 # ---- Model Router（文档 2.5.7：八类角色统一路由 + 降级）----
 ROUTER_ENABLED = os.environ.get("DUDUDA_ROUTER", "1") == "1"
@@ -95,16 +96,14 @@ _RENDER_CONVERTER_SYSTEM = (
 
 provider = OpenAIProvider(
     api_key=API_KEY,
-    base_url="https://api.deepseek.com/v1",
-    base_urls={FALLBACK_MODEL: FALLBACK_BASE, VISION_MODEL: VISION_BASE},
-    api_keys={FALLBACK_MODEL: FALLBACK_KEY, VISION_MODEL: VISION_KEY},
+    base_url=DEEPSEEK_BASE,
 )
-def _role_cfg(role, effort, tokens, temp=0.7, timeout=30.0, model=None, allow_sensitive=False, use_fallback=True):
+def _role_cfg(role, effort, tokens, temp=0.7, timeout=30.0, model=None, allow_sensitive=False):
     return ModelConfig(
         role=role, model_id=model or MODEL, reasoning_effort=effort,
         max_tokens=tokens, temperature=temp, timeout_seconds=timeout,
         retry_count=1, allow_sensitive=allow_sensitive, route_hint_allowed=False,
-        fallback_model_id=(FALLBACK_MODEL if use_fallback else None),
+        fallback_model_id=None,
     )
 router_config = RouterConfig(roles={
     ModelRole.PERCEPTION: _role_cfg(ModelRole.PERCEPTION, "low", 1024),
@@ -113,7 +112,7 @@ router_config = RouterConfig(roles={
     ModelRole.DIRECT_CHAT: _role_cfg(ModelRole.DIRECT_CHAT, "medium", 2048),
     ModelRole.RESPONSE_COMPOSITION: _role_cfg(ModelRole.RESPONSE_COMPOSITION, "medium", 2048),
     ModelRole.MEMORY_SUMMARY: _role_cfg(
-        ModelRole.MEMORY_SUMMARY, "low", 1024, allow_sensitive=True, use_fallback=False),
+        ModelRole.MEMORY_SUMMARY, "low", 1024, allow_sensitive=True),
     ModelRole.IMAGE_UNDERSTANDING: _role_cfg(ModelRole.IMAGE_UNDERSTANDING,
                                             "medium", 1024, temp=0.3, timeout=90.0,
                                             model=VISION_MODEL),
@@ -149,9 +148,6 @@ class _LiveConfig:
     def __getitem__(self, key: str):
         return {
             "MODEL": MODEL,
-            "FALLBACK_MODEL": FALLBACK_MODEL,
-            "FALLBACK_KEY": FALLBACK_KEY,
-            "FALLBACK_BASE": FALLBACK_BASE,
             "VISION_MODEL": VISION_MODEL, "VISION_KEY": VISION_KEY,
             "VISION_BASE": VISION_BASE,
             "MEMORY_FILE": MEMORY_FILE,

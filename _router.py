@@ -17,23 +17,22 @@ class ModelRouter:
 
     def __init__(self):
         deepseek_key = os.environ.get("DEEPSEEK_API_KEY", "")
-        openai_key   = os.environ.get("OPENAI_API_KEY", deepseek_key)
-        openai_base  = os.environ.get("OPENAI_BASE_URL", "https://www.mhcoding.ai")
+        deepseek_base = os.environ.get(
+            "DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
+        model = os.environ.get("DEEPSEEK_MODEL", "deepseek-flash")
 
         self.routes = {
             "text": [
-                Route("deepseek-chat", "deepseek",
-                      base_url="https://api.deepseek.com/v1", api_key=deepseek_key),
+                Route(model, "deepseek",
+                      base_url=deepseek_base, api_key=deepseek_key),
             ],
             "file": [
-                Route("deepseek-chat", "deepseek",
-                      base_url="https://api.deepseek.com/v1", api_key=deepseek_key),
+                Route(model, "deepseek",
+                      base_url=deepseek_base, api_key=deepseek_key),
             ],
             "image": [
-                Route(os.environ.get("VISION_MODEL", "claude-haiku-4-5-20251001"),
-                      "openai", base_url=openai_base, api_key=openai_key),
-                Route("gemini-3.1-flash-image-preview",
-                      "openai", base_url=openai_base, api_key=openai_key),
+                Route(os.environ.get("VISION_MODEL", model), "deepseek",
+                      base_url=deepseek_base, api_key=deepseek_key),
             ],
         }
 

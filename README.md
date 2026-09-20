@@ -16,11 +16,11 @@
 
 生产部署必须设置 `DUDUDA_AGENT_SRC=/path/to/YmaKmern-prototype/packages/dududa-agent/src`；本地开发也可以直接把 prototype 以 editable 模式安装到当前 Python 环境。
 
-## 图片数据流
+## 模型与图片数据流
 
-- 图片、GIF 抽帧和视频关键帧会以 Base64 发往 `OPENAI_BASE_URL` 配置的视觉端点；截图可能含账号、聊天记录等敏感内容。
-- 自定义/中转端点默认禁用。管理员需设置 `DUDUDA_VISION_ALLOW_THIRD_PARTY=1`，并在目标群执行 `/ymakmern_vision on`；两个开关任一关闭都不会上传。
-- 视觉 Trace 始终标记为 `sensitive`。可用 `DUDUDA_VISION_TRUSTED_HOSTS` 配置经审核的官方端点，默认仅信任 `api.openai.com`。
+- 文字回复和图片识别统一使用 `deepseek-flash`，共享 `DEEPSEEK_BASE_URL` 与 `DEEPSEEK_API_KEY`；不配置 GPT/Claude 中转或备用线路。
+- 图片、GIF 抽帧和视频关键帧会以 Base64 发往 DeepSeek 端点；截图可能含账号、聊天记录等敏感内容。
+- 视觉 Trace 始终标记为 `sensitive`。生产环境应将审核过的官方端点写入 `DUDUDA_VISION_TRUSTED_HOSTS`。
 - 外部端点的日志与保留周期由提供方决定，启用前应审查其隐私政策。
 
 ## 人格质量影子评测
