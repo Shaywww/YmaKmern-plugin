@@ -195,6 +195,12 @@ class Main(star.Star):
         self.ux_tasks = ConversationTaskRegistry()
         self.meme_manager_adapter = MemeManagerAdapter(context)
         self.progress_delay = float(os.environ.get("DUDUDA_PROGRESS_DELAY", "5"))
+        # A short quiet window coalesces QQ's adjacent text bubbles without
+        # imposing the old multi-second wait on complete messages.
+        self.turn_merge_delay = float(os.environ.get(
+            "DUDUDA_TURN_MERGE_DELAY", "0.45"))
+        self.turn_merge_max_delay = float(os.environ.get(
+            "DUDUDA_TURN_MERGE_MAX_DELAY", "1.2"))
         self._pending_broadcasts = {}
         self._perception_model_enabled = PERCEPTION_MODEL_ENABLED
         self.context_builder = ContextBuilder(
