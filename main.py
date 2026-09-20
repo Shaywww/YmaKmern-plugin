@@ -94,10 +94,7 @@ _RENDER_CONVERTER_SYSTEM = (
     "附件内容。只输出转换后的文本，不要任何解释。"
 )
 
-provider = OpenAIProvider(
-    api_key=API_KEY,
-    base_url=DEEPSEEK_BASE,
-)
+provider = OpenAIProvider(api_key=API_KEY, base_url=DEEPSEEK_BASE)
 def _role_cfg(role, effort, tokens, temp=0.7, timeout=30.0, model=None, allow_sensitive=False):
     return ModelConfig(
         role=role, model_id=model or MODEL, reasoning_effort=effort,
