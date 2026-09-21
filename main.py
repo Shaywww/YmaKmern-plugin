@@ -65,7 +65,6 @@ from dududa.application.user_experience import (
 from dududa.application.dududa_log import get_logger as _get_logger
 _PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 if _PLUGIN_DIR not in sys.path: sys.path.insert(0, _PLUGIN_DIR)
-os.environ.setdefault("DUDUDA_CATALOG_CACHE_DIR", os.path.join(_PLUGIN_DIR, "data", "ustc_catalog"))
 from _experiment_adapter import make_experiment_registry
 from _meme_manager_adapter import MemeManagerAdapter
 from _router import router as _model_router
@@ -404,12 +403,6 @@ class Main(star.Star):
 
     def _register_mcp_caps(self):
         try:
-            from dududa.mcp.access import mcp_access
-            mcp_access.ensure_seed(owner_ids=tuple(sorted(OWNER_IDS)))
-            # The external iCourse process was only used by the retired course
-            # lookup stack.  Keep the remaining campus capabilities on their
-            # local providers so the retired server cannot be started by an
-            # environment variable left behind on a deployment host.
             n = register_all_mcp_services(self.cap_registry)
             self.mcp_client = None
             logger.info("MCP capabilities registered: %d", n)
