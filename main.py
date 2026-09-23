@@ -190,7 +190,7 @@ class Main(star.Star):
         # A short quiet window coalesces QQ's adjacent text bubbles without
         # imposing the old multi-second wait on complete messages.
         self.turn_merge_delay = float(os.environ.get(
-            "DUDUDA_TURN_MERGE_DELAY", "0.45"))
+            "DUDUDA_TURN_MERGE_DELAY", "0.8"))
         self.turn_merge_max_delay = float(os.environ.get(
             "DUDUDA_TURN_MERGE_MAX_DELAY", "1.2"))
         self._pending_broadcasts = {}
@@ -338,10 +338,14 @@ class Main(star.Star):
 
     def _persona_tone(self): return self._core._persona_tone()
     async def _call_llm(self, system, user_msg, max_tokens=1024, temperature=0.5,
-                        run_id="", trace_id="", skip_render=False):
+                        run_id="", trace_id="", skip_render=False,
+                        structured_output=None, reasoning_effort=None,
+                        role=None):
         return await self._core._call_llm(
             system, user_msg, max_tokens=max_tokens, temperature=temperature,
-            run_id=run_id, trace_id=trace_id, skip_render=skip_render)
+            run_id=run_id, trace_id=trace_id, skip_render=skip_render,
+            structured_output=structured_output,
+            reasoning_effort=reasoning_effort, role=role)
 
     async def _render_llm(self, prompt: str, run_id: str = "",
                           trace_id: str = "") -> str:
@@ -362,7 +366,9 @@ class Main(star.Star):
                 user_msg = f"可用工具:\n{cap_lines}\n\n用户消息: {text}"
             reply = await self._call_llm(
                 PERCEPTION_SYSTEM_PROMPT, user_msg,
-                max_tokens=512, temperature=0.0, skip_render=True)
+                max_tokens=768, temperature=0.0, skip_render=True,
+                structured_output={"type": "json_object"},
+                reasoning_effort="none", role=ModelRole.PERCEPTION)
             if not reply or not reply.strip():
                 return None
             return _json.loads(reply)
